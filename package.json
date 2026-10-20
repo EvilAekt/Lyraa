@@ -1,0 +1,44 @@
+{
+  "name": "bot-ai",
+  "version": "0.1.0",
+  "description": "Discord VTuber AI Voice Bot with DAVE E2EE and Gemini Streaming Pipeline",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "spike:dave": "tsx src/spikes/spike-dave.ts",
+    "spike:gemini": "tsx src/spikes/spike-gemini.ts",
+    "benchmark": "tsx src/benchmarks/latency-harness.ts",
+    "test": "node --test"
+  },
+  "keywords": [
+    "discord",
+    "voice",
+    "dave",
+    "ai",
+    "vtuber",
+    "gemini",
+    "streaming"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@discordjs/voice": "^0.18.0",
+    "@google/genai": "^2.30.0",
+    "@snazzah/davey": "^0.1.12",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.7",
+    "prism-media": "^1.3.5",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

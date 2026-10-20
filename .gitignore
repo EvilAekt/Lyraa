@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Local database & state
+data/
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# Audio & debug recordings (PRD SEC-9: raw audio must never be persisted/committed)
+*.wav
+*.pcm
+*.opus
+debug_audio/
+temp/
+scratch/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/

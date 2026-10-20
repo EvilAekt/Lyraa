@@ -2,7 +2,7 @@
 
 Autonomous AI VTuber Discord Bot dengan protokol enkripsi suara DAVE (Discord Audio/Video End-to-End Encryption), integrasi Google Gemini streaming pipeline, VAD endpointing, kepribadian adaptif, serta memori pengguna SQLite.
 
-Proyek ini dipandu oleh [PRD.md](file:///g:/bot-ai/PRD.md) dan standar pengembangan Antigravity [AGENTS.md](file:///g:/bot-ai/AGENTS.md).
+Proyek ini dipandu oleh rangkaian dokumentasi di folder `docs/` ([docs/README.md](file:///g:/bot-ai/docs/README.md), [docs/PRD.md](file:///g:/bot-ai/docs/PRD.md), [docs/TDD.md](file:///g:/bot-ai/docs/TDD.md), [docs/ROADMAP-DAN-TASK.md](file:///g:/bot-ai/docs/ROADMAP-DAN-TASK.md)) dan standar pengembangan Antigravity [AGENTS.md](file:///g:/bot-ai/AGENTS.md).
 
 ---
 

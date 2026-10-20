@@ -6,15 +6,16 @@ description: >-
 
 # PRD Task Runner
 
-This skill guides the systematic execution of development tasks defined in [PRD.md](file:///g:/bot-ai/PRD.md).
+This skill guides the systematic execution of development tasks defined in [docs/ROADMAP-DAN-TASK.md](file:///g:/bot-ai/docs/ROADMAP-DAN-TASK.md).
 
 ## Task Execution Procedure
 
 1. **Identify the Active Task**:
-   - Locate the current task in `PRD.md §15` (e.g. `T0.1`, `T0.2`, ..., `T1.1`).
+   - Locate the current task in `docs/ROADMAP-DAN-TASK.md §15` (e.g. `T0.1`, `T0.2`, ..., `T1.1`).
    - Confirm that all preceding tasks have met their Acceptance Criteria (AC).
 2. **Review Task Constraints**:
    - Read the **Tujuan** (Goal), **Langkah** (Steps), **AC** (Acceptance Criteria), **Bukti** (Proof), and **Jangan** (Forbidden Actions).
+   - Read the referenced sections in `docs/README.md` (§0), `docs/PRD.md`, or `docs/TDD.md`.
 3. **Execute Steps Incrementally**:
    - Perform atomic changes.
    - Run verification commands (build, lint, test, audio probe).
@@ -25,4 +26,4 @@ This skill guides the systematic execution of development tasks defined in [PRD.
    - Create a clean git commit in English:
      `feat(scope): implement <TaskID> - <summary>` or `chore(spike): complete <TaskID> - <summary>`.
 6. **Phase Gate Check**:
-   - Before advancing to the next phase, verify all gates in `PRD.md §14`. If gate criteria are not met, do NOT proceed.
+   - Before advancing to the next phase, verify all gates in `docs/ROADMAP-DAN-TASK.md §14`. If gate criteria are not met, do NOT proceed.

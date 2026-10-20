@@ -1,8 +1,8 @@
 # Rule: PRD Task Execution Workflow
 
 ## 1. Sequential Progression
-- Tasks must be processed one at a time following the numeric Task ID defined in `PRD.md §15`.
-- Do not skip tasks or leap ahead to future phases without passing the current Phase Gate (`PRD.md §14`).
+- Tasks must be processed one at a time following the numeric Task ID defined in [docs/ROADMAP-DAN-TASK.md](file:///g:/bot-ai/docs/ROADMAP-DAN-TASK.md#15-backlog-task-senior-ke-junior).
+- Do not skip tasks or leap ahead to future phases without passing the current Phase Gate ([docs/ROADMAP-DAN-TASK.md §14](file:///g:/bot-ai/docs/ROADMAP-DAN-TASK.md#14-roadmap)).
 
 ## 2. Epistemic Labels
 Always tag claims and findings with:

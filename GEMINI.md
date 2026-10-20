@@ -2,7 +2,7 @@
 
 ## Working Context
 You are working on `bot-ai`, an AI VTuber Discord Bot project based on AIRI and `discord.js`.
-The project is strictly guided by [PRD.md](file:///g:/bot-ai/PRD.md) and [AGENTS.md](file:///g:/bot-ai/AGENTS.md).
+The project is strictly guided by the modular documentation in `docs/` ([docs/README.md](file:///g:/bot-ai/docs/README.md), [docs/PRD.md](file:///g:/bot-ai/docs/PRD.md), [docs/TDD.md](file:///g:/bot-ai/docs/TDD.md), [docs/ROADMAP-DAN-TASK.md](file:///g:/bot-ai/docs/ROADMAP-DAN-TASK.md)) and [AGENTS.md](file:///g:/bot-ai/AGENTS.md).
 
 ## Critical Guidelines
 1. **Response Language**: Selalu berkomunikasi dengan pengguna dalam Bahasa Indonesia yang profesional, solutif, dan jelas.

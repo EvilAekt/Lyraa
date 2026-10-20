@@ -1,3 +1,6 @@
+# Upstream AIRI clone
+airi/
+
 # Dependencies
 node_modules/
 .pnpm-store/

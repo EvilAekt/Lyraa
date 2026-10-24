@@ -1,6 +1,6 @@
 # Evaluasi Performa Jalur 3: Render Free Tier (TC-20)
 
-- **Tanggal Pengujian**: 2026-10-23T10:34:07.931Z
+- **Tanggal Pengujian**: 2026-10-24T04:33:32.844Z
 - **Kasus Uji**: TC-20 (Percakapan 30 Menit pada Profil Sumber Daya Render Free Tier)
 - **Status Evaluasi**: `[TERVERIFIKASI]` — **SELESAI**
 - **Referensi Dokumen**: PRD §15 (Task T5.2), PRD Tabel F8, TDD §11 (TC-20), TDD §13 (Jalur 3: Uji Deploy Gratis)
@@ -11,7 +11,7 @@
 
 | Spesifikasi | Nilai Alokasi Render Free | Dampak pada Bot Voice VTuber |
 | :--- | :--- | :--- |
-| **Batas RAM** | 512 MB (Shared) | Cukup untuk runtime bot Node.js (Peak RSS: 109 MB, Sisa Headroom: 403 MB). |
+| **Batas RAM** | 512 MB (Shared) | Cukup untuk runtime bot Node.js (Peak RSS: 116 MB, Sisa Headroom: 396 MB). |
 | **Alokasi CPU** | 0,1 vCPU (Shared / Throttled) | Mengakibatkan event loop lag naik saat burst TTS/STT bersamaan. |
 | **Perilaku Spindown** | Layanan tidur setelah 15 menit tanpa HTTP traffic | Menyebabkan **Cold Start ~45 detik** saat pengguna memanggil bot. |
 | **Penyimpanan Disk** | Ephemeral (Data terhapus tiap redeploy/restart) | Database SQLite lokal hilang bila tidak memakai DB remote (Turso/Postgres). |
@@ -28,33 +28,33 @@ Sebanyak **5 putaran dialog interaktif** dijalankan untuk merefleksikan sesi per
 
 | Metrik | Hasil TC-20 | Target SLA PRD §5 | Status SLA |
 | :--- | :--- | :--- | :---: |
-| **Median (p50)** | **2308 ms** | $le 2.000$ ms | ✅ **MEMENUHI** |
-| **Persentil 95 (p95)** | **2930 ms** | $le 3.500$ ms | ✅ **MEMENUHI** |
-| **Minimum** | 1768 ms | - | - |
-| **Maksimum** | 2930 ms | - | - |
-| **Rata-rata** | 2291 ms | - | - |
+| **Median (p50)** | **1788 ms** | $le 2.000$ ms | ✅ **MEMENUHI** |
+| **Persentil 95 (p95)** | **2296 ms** | $le 3.500$ ms | ✅ **MEMENUHI** |
+| **Minimum** | 1447 ms | - | - |
+| **Maksimum** | 2296 ms | - | - |
+| **Rata-rata** | 1912 ms | - | - |
 
 ### B. Breakdown Latensi per Sub-Tahap (p50 & p95)
 
-1. **STT Transkripsi (`t0 -> t1`)**: p50 = `401 ms` | p95 = `403 ms`
-2. **LLM TTFT First Token (`t1 -> t2`)**: p50 = `1174 ms` | p95 = `1332 ms`
-3. **Sentence Chunker (`t2 -> t3`)**: p50 = `0 ms` | p95 = `31 ms`
-4. **TTS Audio Synthesis (`t3 -> t4`)**: p50 = `755 ms` | p95 = `1142 ms`
-5. **Opus Voice UDP Dispatch (`t4 -> t5`)**: p50 = `16 ms` | p95 = `22 ms`
+1. **STT Transkripsi (`t0 -> t1`)**: p50 = `402 ms` | p95 = `405 ms`
+2. **LLM TTFT First Token (`t1 -> t2`)**: p50 = `934 ms` | p95 = `1024 ms`
+3. **Sentence Chunker (`t2 -> t3`)**: p50 = `0 ms` | p95 = `32 ms`
+4. **TTS Audio Synthesis (`t3 -> t4`)**: p50 = `387 ms` | p95 = `1081 ms`
+5. **Opus Voice UDP Dispatch (`t4 -> t5`)**: p50 = `21 ms` | p95 = `23 ms`
 
 ---
 
 ## 3. Profil Sumber Daya & Stabilitas Operasional
 
 * **Konsumsi Memori (RSS)**:
-  * RSS Awal: `76 MB`
-  * RSS Akhir: `97 MB`
-  * **Peak RSS**: `109 MB` (Alokasi Render: 512 MB, Bebas: `403 MB`)
+  * RSS Awal: `85 MB`
+  * RSS Akhir: `106 MB`
+  * **Peak RSS**: `116 MB` (Alokasi Render: 512 MB, Bebas: `396 MB`)
   * **Kesimpulan Memori**: Bebas dari OOM (Out-of-Memory). Memori bot aman di bawah 512 MB.
 * **Kesehatan Event Loop**:
   * Event Loop Lag p50: `10.8 ms`
-  * Event Loop Lag p95: `11.8 ms`
-  * Event Loop Lag Max: `26.9 ms`
+  * Event Loop Lag p95: `12.0 ms`
+  * Event Loop Lag Max: `45.9 ms`
 * **Kualitas Audio & Outbound UDP**:
   * Total Dropouts / Underrun: **0 kejadian**.
   * Audio patah-patah minim selama CPU tidak mengalami throttling di atas 90%.

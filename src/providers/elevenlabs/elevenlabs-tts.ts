@@ -19,6 +19,8 @@ export interface ElevenLabsConfig {
   outputFormat?: string;
   stability?: number;
   similarityBoost?: number;
+  style?: number;
+  speed?: number;
   timeoutMs?: number;
 }
 
@@ -29,6 +31,8 @@ export class ElevenLabsTtsProvider implements TtsProvider {
   private outputFormat: string;
   private stability: number;
   private similarityBoost: number;
+  private style: number;
+  private speed: number;
   private timeoutMs: number;
 
   constructor(cfg: ElevenLabsConfig) {
@@ -36,8 +40,10 @@ export class ElevenLabsTtsProvider implements TtsProvider {
     this.voiceId = cfg.voiceId || '0CzBBZVHSe1kKQOUHVzq';
     this.modelId = cfg.modelId || 'eleven_turbo_v2_5';
     this.outputFormat = cfg.outputFormat || 'pcm_48000';
-    this.stability = cfg.stability ?? 0.5;
-    this.similarityBoost = cfg.similarityBoost ?? 0.8;
+    this.stability = cfg.stability ?? 0.35;
+    this.similarityBoost = cfg.similarityBoost ?? 0.75;
+    this.style = cfg.style ?? 0.65;
+    this.speed = cfg.speed ?? 1.15;
     this.timeoutMs = cfg.timeoutMs ?? 5000;
   }
 
@@ -60,6 +66,30 @@ export class ElevenLabsTtsProvider implements TtsProvider {
     const oldId = this.voiceId;
     this.voiceId = newVoiceId.trim();
     console.log(`[ElevenLabsTtsProvider] Switched voice ID from ${oldId} to ${this.voiceId}`);
+  }
+
+  public setVoiceSettings(settings: {
+    stability?: number;
+    similarityBoost?: number;
+    style?: number;
+    speed?: number;
+  }): void {
+    if (settings.stability !== undefined) this.stability = settings.stability;
+    if (settings.similarityBoost !== undefined) this.similarityBoost = settings.similarityBoost;
+    if (settings.style !== undefined) this.style = settings.style;
+    if (settings.speed !== undefined) this.speed = settings.speed;
+    console.log(
+      `[ElevenLabsTtsProvider] Updated voice settings: stability=${this.stability}, similarity=${this.similarityBoost}, style=${this.style}, speed=${this.speed}`
+    );
+  }
+
+  public getVoiceSettings(): { stability: number; similarityBoost: number; style: number; speed: number } {
+    return {
+      stability: this.stability,
+      similarityBoost: this.similarityBoost,
+      style: this.style,
+      speed: this.speed,
+    };
   }
 
   /**
@@ -175,6 +205,9 @@ export class ElevenLabsTtsProvider implements TtsProvider {
           voice_settings: {
             stability: this.stability,
             similarity_boost: this.similarityBoost,
+            style: this.style,
+            use_speaker_boost: true,
+            speed: this.speed,
           },
         }),
         signal: controller.signal,
@@ -240,6 +273,9 @@ export class ElevenLabsTtsProvider implements TtsProvider {
         voice_settings: {
           stability: this.stability,
           similarity_boost: this.similarityBoost,
+          style: this.style,
+          use_speaker_boost: true,
+          speed: this.speed,
         },
       }),
       signal: controller.signal,

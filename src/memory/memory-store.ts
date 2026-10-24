@@ -324,6 +324,18 @@ export class MemoryStore {
   }
 
   /**
+   * Clears short-term conversation turns for a specific channel (e.g. when voice session ends).
+   * Ensures the next voice session starts with a clean conversational slate.
+   * Long-term user facts (user_memories) are strictly preserved.
+   */
+  public clearChannelTurns(channelId: string): number {
+    if (!channelId) return 0;
+    const stmt = this.db.prepare('DELETE FROM conversation_turns WHERE channel_id = ?');
+    const result = stmt.run(channelId);
+    return Number(result.changes);
+  }
+
+  /**
    * Delete all persistent facts and turn history for a single user (/forget me, FR-P4, TC-15).
    */
   public deleteUserMemories(userId: string): DeleteUserMemoriesResult {

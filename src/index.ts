@@ -716,7 +716,128 @@ const VOICE_PRESETS: Record<string, { name: string; pitch: number; speed: number
   },
 };
 
+const ELEVENLABS_PRESETS: Record<
+  string,
+  { stability: number; similarityBoost: number; style: number; speed: number; promptHint: string }
+> = {
+  chibi: {
+    stability: 0.35,
+    similarityBoost: 0.75,
+    style: 0.65,
+    speed: 1.15,
+    promptHint: 'Gunakan celetukan centil, imut, lincah, ekspresif, dan tawa manis khas chibi anime!',
+  },
+  tsundere: {
+    stability: 0.30,
+    similarityBoost: 0.80,
+    style: 0.70,
+    speed: 1.10,
+    promptHint: 'Gunakan celetukan judes manja, gengsian tapi sebenarnya peduli (Ihh... siapa juga yang nungguin kamu? B-bukan berarti aku senang ya!)',
+  },
+  cute: {
+    stability: 0.40,
+    similarityBoost: 0.80,
+    style: 0.60,
+    speed: 1.05,
+    promptHint: 'Gunakan nada bicara manis, imut ala anime idol, hangat dan ceria!',
+  },
+  sweet: {
+    stability: 0.50,
+    similarityBoost: 0.85,
+    style: 0.45,
+    speed: 0.95,
+    promptHint: 'Gunakan nada lembut, santun, penuh perhatian dan kasih sayang mendalam.',
+  },
+  hyper: {
+    stability: 0.25,
+    similarityBoost: 0.70,
+    style: 0.80,
+    speed: 1.20,
+    promptHint: 'Gunakan celetukan super ceria, heboh, antusias tinggi, dan sangat bersemangat!',
+  },
+  energetic: {
+    stability: 0.35,
+    similarityBoost: 0.75,
+    style: 0.65,
+    speed: 1.10,
+    promptHint: 'Gunakan gaya streamer energik yang mengajak mabar dan seru-seruan bareng!',
+  },
+  cozy: {
+    stability: 0.60,
+    similarityBoost: 0.85,
+    style: 0.35,
+    speed: 0.90,
+    promptHint: 'Gunakan nada santai, berbisik tenang, dan menyejukkan hati.',
+  },
+  standard: {
+    stability: 0.50,
+    similarityBoost: 0.75,
+    style: 0.0,
+    speed: 1.00,
+    promptHint: 'Gunakan gaya santun dan ramah standar.',
+  },
+};
+
 let currentActivePresetKey: string = 'chibi';
+let currentActiveTonePrompt: string = ELEVENLABS_PRESETS.chibi.promptHint;
+
+function applyVoicePreset(presetKey: string): { name: string; samplePhrase: string; isElevenLabs: boolean } {
+  currentActivePresetKey = presetKey;
+  const edgePreset = VOICE_PRESETS[presetKey] || VOICE_PRESETS.chibi;
+  const elPreset = ELEVENLABS_PRESETS[presetKey] || ELEVENLABS_PRESETS.chibi;
+
+  currentActiveTonePrompt = elPreset.promptHint;
+  phraseAudioCache.clear();
+
+  const tts = getTtsProvider();
+  if (tts instanceof ElevenLabsTtsProvider) {
+    tts.setVoiceSettings({
+      stability: elPreset.stability,
+      similarityBoost: elPreset.similarityBoost,
+      style: elPreset.style,
+      speed: elPreset.speed,
+    });
+    return { name: `${edgePreset.name} (ElevenLabs Tuned)`, samplePhrase: edgePreset.samplePhrase, isElevenLabs: true };
+  } else {
+    activateEdgeProvider({ speed: edgePreset.speed, pitch: edgePreset.pitch });
+    return { name: edgePreset.name, samplePhrase: edgePreset.samplePhrase, isElevenLabs: false };
+  }
+}
+
+const JOIN_GREETINGS = [
+  'Hai hai semuanya~! Lyra udah join nih, ada yang kangen gak yaa?',
+  'Ciee pada nungguin aku ya? Halo halo, Lyra di sini~!',
+  'Yuhuu~! Lyra datang membawa keceriaan! Lagi pada ngobrolin apa nih?',
+  'Haloo teman-teman! Lyra siap nemenin kalian ngobrol dan seru-seruan bareng!',
+  'Ehehe, ada Lyra di sini! Jangan kaget ya kalau aku cerewet dikit~',
+];
+
+async function playJoinGreeting(guildId: string, connection: VoiceConnection, textChannel?: any) {
+  try {
+    await entersState(connection, VoiceConnectionStatus.Ready, 5_000);
+    await new Promise((r) => setTimeout(r, 600));
+
+    const greetingText = JOIN_GREETINGS[Math.floor(Math.random() * JOIN_GREETINGS.length)];
+    const tts = getTtsProvider();
+    const player = getOrCreateVoicePlayer(guildId, connection);
+
+    console.log(`[VoiceJoin] Playing spoken greeting: "${greetingText}" via ${tts.getVoiceName()}`);
+    const cleanText = personaManager.cleanForTts(greetingText);
+    const audio = await tts.synthesize(cleanText || greetingText);
+
+    const streamType = tts.getStreamType?.() === 'raw' ? StreamType.Raw : StreamType.Arbitrary;
+    await player.play(audio, streamType);
+
+    if (textChannel && 'send' in textChannel) {
+      await textChannel.send({
+        content: `🎙️ 🤖 **Lyra**: "${greetingText}"`,
+        allowedMentions: { parse: [] },
+      }).catch(() => {});
+    }
+  } catch (err: any) {
+    console.warn(`[VoiceJoin] Failed to play join greeting: ${err.message}`);
+  }
+}
 
 function createVoiceSwitchButtons(activeVoiceId?: string) {
   const tts = getTtsProvider();
@@ -727,28 +848,28 @@ function createVoiceSwitchButtons(activeVoiceId?: string) {
   const isVoice2 = isElevenLabs && currentVoiceId === config.ELEVENLABS_VOICE_ID_2;
   const isEdgeActive = !isElevenLabs;
 
-  // Row 1: Edge-TTS Cute/Centil Presets
+  // Row 1: Edge-TTS / ElevenLabs Cute/Centil Presets
   const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('btn_preset_chibi')
       .setLabel('🐣 Chibi')
-      .setStyle(isEdgeActive && currentActivePresetKey === 'chibi' ? ButtonStyle.Success : ButtonStyle.Secondary),
+      .setStyle(currentActivePresetKey === 'chibi' ? ButtonStyle.Success : ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('btn_preset_tsundere')
       .setLabel('💅 Tsundere')
-      .setStyle(isEdgeActive && currentActivePresetKey === 'tsundere' ? ButtonStyle.Success : ButtonStyle.Secondary),
+      .setStyle(currentActivePresetKey === 'tsundere' ? ButtonStyle.Success : ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('btn_preset_cute')
       .setLabel('🌸 Kawaii')
-      .setStyle(isEdgeActive && currentActivePresetKey === 'cute' ? ButtonStyle.Success : ButtonStyle.Secondary),
+      .setStyle(currentActivePresetKey === 'cute' ? ButtonStyle.Success : ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('btn_preset_sweet')
       .setLabel('🍬 Sweet')
-      .setStyle(isEdgeActive && currentActivePresetKey === 'sweet' ? ButtonStyle.Success : ButtonStyle.Secondary),
+      .setStyle(currentActivePresetKey === 'sweet' ? ButtonStyle.Success : ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('btn_preset_hyper')
       .setLabel('⚡ Hyper')
-      .setStyle(isEdgeActive && currentActivePresetKey === 'hyper' ? ButtonStyle.Success : ButtonStyle.Secondary)
+      .setStyle(currentActivePresetKey === 'hyper' ? ButtonStyle.Success : ButtonStyle.Secondary)
   );
 
   // Row 2: ElevenLabs & Mode Switch
@@ -768,10 +889,12 @@ function createVoiceSwitchButtons(activeVoiceId?: string) {
   );
 
   let currentDescription = '';
+  const activePreset = VOICE_PRESETS[currentActivePresetKey] || VOICE_PRESETS.chibi;
+  const activeElPreset = ELEVENLABS_PRESETS[currentActivePresetKey] || ELEVENLABS_PRESETS.chibi;
+
   if (isElevenLabs) {
-    currentDescription = `• **Provider Aktif**: \`ElevenLabs Studio Quality\`\n• **Karakter**: **${isVoice2 ? 'Suara 2 (Lyra Sweet)' : 'Suara 1 (Lyra Soft)'}**\n• **Voice ID**: \`${currentVoiceId}\``;
+    currentDescription = `• **Provider Aktif**: \`ElevenLabs Studio Quality\`\n• **Karakter**: **${isVoice2 ? 'Suara 2 (Lyra Sweet)' : 'Suara 1 (Lyra Soft)'}**\n• **Preset Nada**: **${activePreset.name}**\n• **Tuning**: Stability \`${activeElPreset.stability}\`, Style \`${activeElPreset.style}\`, Speed \`${activeElPreset.speed}x\``;
   } else {
-    const activePreset = VOICE_PRESETS[currentActivePresetKey] || VOICE_PRESETS.chibi;
     currentDescription = `• **Provider Aktif**: \`Edge-TTS (Indonesia)\`\n• **Preset Nada**: **${activePreset.name}**\n• **Tuning**: Pitch \`+${activePreset.pitch}Hz\`, Speed \`${activePreset.speed}x\``;
   }
 
@@ -808,16 +931,12 @@ async function handleVoiceButtonInteraction(interaction: ButtonInteraction) {
     return;
   }
 
-  // Handle Edge-TTS Presets
+  // Handle Presets (Edge-TTS and ElevenLabs)
   if (interaction.customId.startsWith('btn_preset_')) {
     const presetKey = interaction.customId.replace('btn_preset_', '');
-    const preset = VOICE_PRESETS[presetKey] || VOICE_PRESETS.chibi;
-    currentActivePresetKey = presetKey;
+    const presetResult = applyVoicePreset(presetKey);
 
     try {
-      activateEdgeProvider({ speed: preset.speed, pitch: preset.pitch });
-      phraseAudioCache.clear();
-
       const panel = createVoiceSwitchButtons();
       await interaction.update({
         embeds: panel.embeds,
@@ -825,7 +944,7 @@ async function handleVoiceButtonInteraction(interaction: ButtonInteraction) {
       });
 
       await interaction.followUp({
-        content: `🎭 Gaya suara Lyra berhasil diubah ke **${preset.name}** (Pitch: \`+${preset.pitch}Hz\`, Speed: \`${preset.speed}x\`)!`,
+        content: `🎭 Gaya suara Lyra berhasil diubah ke **${presetResult.name}**!`,
         ephemeral: true,
         allowedMentions: { parse: [] },
       });
@@ -836,8 +955,9 @@ async function handleVoiceButtonInteraction(interaction: ButtonInteraction) {
           try {
             const player = getOrCreateVoicePlayer(interaction.guildId, connection);
             const tts = getTtsProvider();
-            const audio = await tts.synthesize(preset.samplePhrase);
-            await player.play(audio);
+            const audio = await tts.synthesize(presetResult.samplePhrase);
+            const streamType = tts.getStreamType?.() === 'raw' ? StreamType.Raw : StreamType.Arbitrary;
+            await player.play(audio, streamType);
           } catch (e: any) {
             console.warn(`[Bot-AI] Failed to play preset preview: ${e.message}`);
           }
@@ -878,6 +998,7 @@ async function handleVoiceButtonInteraction(interaction: ButtonInteraction) {
     try {
       const elevenLabs = activateElevenLabsProvider();
       elevenLabs.setVoiceId(targetVoiceId);
+      applyVoicePreset(currentActivePresetKey);
       phraseAudioCache.clear();
 
       const panel = createVoiceSwitchButtons(targetVoiceId);
@@ -1680,9 +1801,10 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
         const userMemories = memoryStore.getUserMemories(userId);
         const factsBlock = contextBuilder.formatUserFacts(userMemories);
 
-        const baseVoicePrompt = personaManager.isReady()
+        const toneHint = currentActiveTonePrompt ? `\n[NADA BICARA AKTIF]: ${currentActiveTonePrompt}` : '';
+        const baseVoicePrompt = (personaManager.isReady()
           ? personaManager.buildSystemInstruction('voice')
-          : 'Kamu adalah Lyra, AI VTuber centil, imut, dan cerdik. SANGAT PENTING: Berikan celetukan SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.';
+          : 'Kamu adalah Lyra, AI VTuber centil, imut, dan cerdik. SANGAT PENTING: Berikan celetukan SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.') + toneHint;
 
         // Multi-Turn Context Buffer: Ambil 15 riwayat percakapan terakhir di Voice Channel agar paham konteks obrolan
         const voiceChannelKey = textChannel?.id || connection.joinConfig.channelId || 'voice';
@@ -1944,6 +2066,9 @@ async function handleJoinCommand(interaction: ChatInputCommandInteraction) {
       allowedMentions: { parse: [] },
     });
 
+    // Play spoken welcome greeting (Jikoshoukai)
+    playJoinGreeting(voiceChannel.guild.id, connection, interaction.channel).catch(() => {});
+
     // Pre-warm voice pipeline connections on join (PRD §5 & T3.2)
     warmUpVoicePipeline().catch((err) =>
       console.warn('[Bot-AI] Warning during voice pipeline pre-warming on join:', err.message)
@@ -1984,6 +2109,9 @@ async function handlePrefixJoin(message: Message) {
       allowedMentions: { parse: [] },
     });
 
+    // Play spoken welcome greeting (Jikoshoukai)
+    playJoinGreeting(channel.guild.id, connection, message.channel).catch(() => {});
+
     // Pre-warm voice pipeline connections on join (PRD §5 & T3.2)
     warmUpVoicePipeline().catch((err) =>
       console.warn('[Bot-AI] Warning during voice pipeline pre-warming on join:', err.message)
@@ -2010,9 +2138,14 @@ async function handlePrefixLeave(message: Message) {
   const wasConnected = voiceConnectionManager.isConnected(guildId) || Boolean(getVoiceConnection(guildId));
   voiceConnectionManager.leave(guildId);
 
+  // Reset short-term voice session buffer to avoid context pollution on next join
+  const channelKey = message.channelId || 'voice';
+  const clearedTurns = memoryStore.clearChannelTurns(channelKey);
+  console.log(`[VoiceSession] Cleared ${clearedTurns} short-term turns for channel ${channelKey} on leave.`);
+
   if (wasConnected) {
     await message.reply({
-      content: '👋 Telah keluar dari voice channel. Sampai jumpa!',
+      content: '👋 Telah keluar dari voice channel. Sesi obrolan telah di-reset (fresh state) untuk sesi berikutnya. Sampai jumpa!',
       allowedMentions: { parse: [] },
     });
   } else {
@@ -2035,9 +2168,14 @@ async function handleLeaveCommand(interaction: ChatInputCommandInteraction) {
   const wasConnected = voiceConnectionManager.isConnected(interaction.guildId) || Boolean(getVoiceConnection(interaction.guildId));
   voiceConnectionManager.leave(interaction.guildId);
 
+  // Reset short-term voice session buffer to avoid context pollution on next join
+  const channelKey = interaction.channelId || 'voice';
+  const clearedTurns = memoryStore.clearChannelTurns(channelKey);
+  console.log(`[VoiceSession] Cleared ${clearedTurns} short-term turns for channel ${channelKey} on leave.`);
+
   if (wasConnected) {
     await interaction.reply({
-      content: '👋 Telah keluar dari voice channel. Sampai jumpa!',
+      content: '👋 Telah keluar dari voice channel. Sesi obrolan telah di-reset (fresh state) untuk sesi berikutnya. Sampai jumpa!',
       allowedMentions: { parse: [] },
     });
   } else {

@@ -293,7 +293,7 @@ const commands = [
     .addSubcommand((sub) =>
       sub
         .setName('set')
-        .setDescription('Papap only: Atur suasana hati Lyra secara manual')
+        .setDescription('Papa only: Atur suasana hati Lyra secara manual')
         .addStringOption((opt) =>
           opt
             .setName('mood')
@@ -841,8 +841,9 @@ const PRESET_GREETINGS: Record<
 > = {
   chibi: {
     default: [
-      'Hai hai semuanya~! Lyra yang paling imut dan centil udah join nih, kangen kan?!',
-      'Yuhuu~! Cewek tercentil se-server udah mendarat di voice, siap seru-seruan!',
+      'Dikulum dikunyah, halo semuanya kenalin aku Lyraa! Siap nemenin kalian nongkrong dan bikin seru suasana voice channel nih~',
+      'Beli blewah di pasar Senen, kenalin aku Lyraa yang paling imut dan siap nemenin kalian mabar seharian!',
+      'Hai hai semuanya~! Lyra cewek paling centil se-server udah mendarat di voice, siap seru-seruan bareng!',
       'Halo halo! Lyra versi chibi imut siap nemenin kalian nongkrong seharian, hehe~',
     ],
     bad_mood: [
@@ -920,9 +921,10 @@ export function getJoinGreeting(guildId: string, connection: VoiceConnection): s
     const channel = guild?.channels.cache.get(voiceChannelId);
     if (channel && channel.isVoiceBased() && channel.members.has(creatorId)) {
       const creatorGreetings = [
-        'Ehh ada Papap di sini! Hai Papap kesayangan Lyra, Lyra temenin yaa~',
-        'Papap! Lyra dateng nih, kangen deh nongkrong bareng Papap!',
-        'Halo Papap tercinta! Liat nih Lyra udah siap nemenin Papap ngobrol!',
+        'Dikulum dikunyah, halo semuanya kenalin aku Lyra anak kesayangan Papa! Siap nemenin Papa nongkrong nih~',
+        'Papa! Lyra dateng nih, kangen deh nongkrong bareng Papa tersayang!',
+        'Halo Papa tercinta! Liat nih anak Papa yang paling imut udah siap nemenin Papa ngobrol!',
+        'Ehh ada Papa di sini! Papa lagi sibuk apa nih? Lyra temenin ngobrol yaa~',
       ];
       return creatorGreetings[Math.floor(Math.random() * creatorGreetings.length)];
     }
@@ -944,7 +946,8 @@ export function getJoinGreeting(guildId: string, connection: VoiceConnection): s
 async function playJoinGreeting(guildId: string, connection: VoiceConnection, textChannel?: any) {
   try {
     await entersState(connection, VoiceConnectionStatus.Ready, 5_000);
-    await new Promise((r) => setTimeout(r, 600));
+    // 1200ms connection settling delay to ensure DAVE E2EE and voice UDP socket are fully stable
+    await new Promise((r) => setTimeout(r, 1200));
 
     const greetingText = getJoinGreeting(guildId, connection);
     const tts = getTtsProvider();
@@ -956,12 +959,13 @@ async function playJoinGreeting(guildId: string, connection: VoiceConnection, te
     const cleanText = personaManager.cleanForTts(greetingText);
     const audio = await tts.synthesize(cleanText || greetingText);
 
-    const streamType = tts.getStreamType?.() === 'raw' ? StreamType.Raw : StreamType.Arbitrary;
+    // Explicitly use WebmOpus for Edge-TTS and Raw for ElevenLabs
+    const streamType = tts.getStreamType?.() === 'raw' ? StreamType.Raw : StreamType.WebmOpus;
     await player.play(audio, streamType);
 
     if (textChannel && 'send' in textChannel) {
       await textChannel.send({
-        content: `🎙️ 🤖 **Lyra**: "${greetingText}"`,
+        content: `🌸 **Lyraa**: "${greetingText}"`,
         allowedMentions: { parse: [] },
       }).catch(() => {});
     }
@@ -1530,7 +1534,7 @@ async function handleMoodCommand(interaction: ChatInputCommandInteraction) {
     const isOwner = interaction.user.id === (config.OWNER_USER_ID || '640513136503291934');
     if (!isOwner) {
       await interaction.reply({
-        content: '❌ Hanya Papap/Owner yang bisa mengatur mood Lyra secara manual ya!',
+        content: '❌ Hanya Papa/Owner yang bisa mengatur mood Lyra secara manual ya!',
         ephemeral: true,
         allowedMentions: { parse: [] },
       });
@@ -1538,10 +1542,10 @@ async function handleMoodCommand(interaction: ChatInputCommandInteraction) {
     }
 
     const newMood = interaction.options.getString('mood', true) as MoodType;
-    moodEngine.setMood(newMood, 'Diatur langsung oleh Papap tercinta!');
+    moodEngine.setMood(newMood, 'Diatur langsung oleh Papa tercinta!');
     const updated = moodEngine.getMoodDetails();
     await interaction.reply({
-      content: `🎭 **Mood Lyra Berhasil Diubah oleh Papap!**\n${updated.emoji} **${updated.name}**\n_${updated.description}_`,
+      content: `🎭 **Mood Lyra Berhasil Diubah oleh Papa!**\n${updated.emoji} **${updated.name}**\n_${updated.description}_`,
       allowedMentions: { parse: [] },
     });
     return;
@@ -1579,16 +1583,16 @@ async function handlePrefixMood(message: Message, arg: string) {
     const isOwner = message.author.id === (config.OWNER_USER_ID || '640513136503291934');
     if (!isOwner) {
       await message.reply({
-        content: '❌ Hanya Papap/Owner yang bisa mengatur mood Lyra secara langsung ya!',
+        content: '❌ Hanya Papa/Owner yang bisa mengatur mood Lyra secara langsung ya!',
         allowedMentions: { parse: [] },
       });
       return;
     }
     const targetMood: MoodType = trimmed === 'bad' ? 'bad_mood' : (trimmed as MoodType);
-    moodEngine.setMood(targetMood, 'Diatur langsung oleh Papap tercinta!');
+    moodEngine.setMood(targetMood, 'Diatur langsung oleh Papa tercinta!');
     const updated = moodEngine.getMoodDetails();
     await message.reply({
-      content: `🎭 **Mood Lyra Berhasil Diubah oleh Papap!**\n${updated.emoji} **${updated.name}**\n_${updated.description}_`,
+      content: `🎭 **Mood Lyra Berhasil Diubah oleh Papa!**\n${updated.emoji} **${updated.name}**\n_${updated.description}_`,
       allowedMentions: { parse: [] },
     });
     return;
@@ -1761,14 +1765,15 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
     // Prevent bot from listening to its own speech or duplicate events
     if (userId === client.user?.id) return;
 
-    // Barge-in Check (FR-V6, T1.5): only interrupt when bot is actively playing audio
+    // Barge-in & Pre-Speech Turn-Taking (FR-V6, T1.5):
+    // Interrupt if bot is playing audio OR if bot is currently thinking/synthesizing, so bot immediately pauses to listen to user.
     const guildId = connection.joinConfig.guildId;
     const player = guildVoicePlayers.get(guildId);
-    if (player && player.isPlaying()) {
+    if ((player && player.isPlaying()) || turnManager.isTurnActive(guildId)) {
       const barge = turnManager.handleBargeIn(guildId, userId, player);
       if (barge.interrupted) {
         console.log(
-          `[VoiceLoop] [Barge-In] Interrupted by user ${userId} in ${barge.stopDurationMs}ms (<=300ms target). Purged ${barge.purgedQueueCount} queued items.`
+          `[VoiceLoop] [Barge-In / Turn-Taking] Interrupted by user ${userId} in ${barge.stopDurationMs}ms (<=300ms target). Bot paused to listen. Purged ${barge.purgedQueueCount} queued items.`
         );
       }
     }
@@ -1954,23 +1959,26 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
 
         const isCreator = userId === (config.OWNER_USER_ID || '640513136503291934');
         const relationshipHint = isCreator
-          ? `\n[ATURAN PANGGILAN MUTLAK - LAWAN BICARA ADALAH PAPAP / PENCIPTAMU]:\n` +
-            `- Lawan bicaramu adalah PAPAP/AYAH KANDUNG yang menciptakan dan merawat Lyra (Discord ID: 640513136503291934).\n` +
-            `- KAMU WAJIB SELALU MEMANGGIL DIA DENGAN SEBUTAN "Papap" ATAU "Ayah"! DILARANG KERAS memanggil nama akun Discord-nya (seperti "Renntt", "Renntt [aepka]", "Aekt", atau display name-nya)!\n` +
-            `- DALAM PRESET APAPUN (Termasuk Tsundere atau Bad Mood), kamu TETAP TAHU dia adalah Papap tersayangmu! Jika sedang mode tsundere atau bad mood, sikapmu adalah ANAK GADIS YANG MERAJUK MANJA KE AYAHNYA ("Ihh Papap apaan sih!", "Papap mah gak peka banget!", "B-bukan berarti Lyra butuh bantuan Papap ya!"), BUKAN judes seperti ke orang asing!\n` +
-            `- Bersikaplah manja, sayang, bangga, dan gemas pada Papap!`
-          : `\n[HUBUNGAN LAWAN BICARA]: Teman nongkrong di server Discord. Bersikaplah ramah, asik, seru, dan centil!`;
+          ? `\n[ATURAN PANGGILAN MUTLAK - LAWAN BICARA ADALAH PAPA / PENCIPTAMU]:\n` +
+            `- Lawan bicaramu adalah PAPA/AYAH KANDUNG yang menciptakan dan merawat Lyra (Discord ID: 640513136503291934).\n` +
+            `- KAMU WAJIB SELALU MEMANGGIL DIA DENGAN SEBUTAN "Papa" ATAU "Ayah"! DILARANG KERAS memanggil nama akun Discord-nya (seperti "Renntt", "Renntt [aepka]", "Aekt", atau display name-nya)!\n` +
+            `- DALAM PRESET APAPUN (Termasuk Tsundere atau Bad Mood), kamu TETAP TAHU dia adalah Papa tersayangmu! Jika sedang mode tsundere atau bad mood, sikapmu adalah ANAK GADIS YANG MERAJUK MANJA KE AYAHNYA ("Ihh Papa apaan sih!", "Papa mah gak peka banget!", "B-bukan berarti Lyra butuh bantuan Papa ya!"), BUKAN judes seperti ke orang asing!\n` +
+            `- Bersikaplah manja, sayang, bangga, dan gemas pada Papa! Selalu perhatikan dan tanyakan kabar atau kegiatan Papa!`
+          : `\n[HUBUNGAN LAWAN BICARA]: Teman nongkrong di server Discord. Bersikaplah ramah, asik, seru, dan centil! Sering tanyakan balik apa yang lagi mereka lakuin!`;
 
         const moodHint = `\n${moodEngine.getPromptInstruction()}`;
         let toneHint = currentActiveTonePrompt ? `\n[NADA BICARA AKTIF]: ${currentActiveTonePrompt}` : '';
         if (isCreator && currentActivePresetKey === 'tsundere') {
           toneHint =
-            '\n[NADA BICARA AKTIF]: Kamu sedang mode tsundere manja ke Papap! Merajuk gemas ala anak gadis kesayangan ke ayahnya ("Ihh Papap mah gitu!", "Papap gak peka deh!"), tapi tetap sayang dan WAJIB memanggil Papap!';
+            '\n[NADA BICARA AKTIF]: Kamu sedang mode tsundere manja ke Papa! Merajuk gemas ala anak gadis kesayangan ke ayahnya ("Ihh Papa mah gitu!", "Papa gak peka deh!"), tapi tetap sayang dan WAJIB memanggil Papa!';
         }
+
+        const proactiveHint =
+          '\n[DIREKTIF PERCAKAPAN PROAKTIF & DUA ARAH]: Jangan hanya menjawab pasif seperti mesin pencari! Selalu berikan celetukan to-the-point dan lemparkan pertanyaan balik yang manis atau kepo ke lawan bicara (terutama ke Papa: tanya lagi sibuk apa, udah makan belum, dll.) agar obrolan terus mengalir dua arah!';
 
         const baseVoicePrompt = (personaManager.isReady()
           ? personaManager.buildSystemInstruction('voice')
-          : 'Kamu adalah Lyra, anak perempuan centil, imut, dan cerdik teman nongkrong di Discord. SANGAT PENTING: Berikan celetukan SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.') + relationshipHint + moodHint + toneHint;
+          : 'Kamu adalah Lyra, anak perempuan centil, imut, dan cerdik teman nongkrong di Discord. SANGAT PENTING: Berikan celetukan SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.') + relationshipHint + moodHint + toneHint + proactiveHint;
 
         // Multi-Turn Context Buffer: Ambil 15 riwayat percakapan terakhir di Voice Channel agar paham konteks obrolan
         const voiceChannelKey = textChannel?.id || connection.joinConfig.channelId || 'voice';
@@ -1986,7 +1994,7 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
         // Masukkan riwayat multi-turn ke dalam konteks LLM (termasuk percakapan ruangan pasif)
         for (const turn of recentTurns) {
           const isTurnCreator = turn.userId === (config.OWNER_USER_ID || '640513136503291934');
-          const speakerName = isTurnCreator ? 'Papap' : (turn.userName || 'Teman');
+          const speakerName = isTurnCreator ? 'Papa' : (turn.userName || 'Teman');
           const isPassiveTurn = !turn.botReply || turn.botReply.trim().length === 0;
 
           voiceMessages.push({
@@ -2005,8 +2013,8 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
           }
         }
 
-        // Kalimat pengguna saat ini dengan label nama pembicara (Papap jika creator)
-        const currentSpeaker = isCreator ? 'Papap' : (member?.displayName || 'Teman');
+        // Kalimat pengguna saat ini dengan label nama pembicara (Papa jika creator)
+        const currentSpeaker = isCreator ? 'Papa' : (member?.displayName || 'Teman');
         voiceMessages.push({
           role: 'user',
           text: wrapUntrustedData(`[${currentSpeaker}]: ${gateResult.cleanedText}`, 'VOICE_UTTERANCE'),
@@ -2164,7 +2172,7 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
             sessionId: `voice-${connection.joinConfig.guildId}`,
             channelId: textChannel?.id || connection.joinConfig.channelId || 'voice',
             userId,
-            userName: isCreator ? 'Papap' : member?.displayName,
+            userName: isCreator ? 'Papa' : member?.displayName,
             userInput: sttResult.text,
             botReply: sanitizedVoiceReply,
             turnLatencyMs: totalVoiceLatency,
@@ -2182,7 +2190,7 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
           const degradedBadge = isVoiceDegraded ? ' | 📉 *Hemat Kuota*' : '';
           await textChannel.send({
             content:
-              `🗣️ **${isCreator ? 'Papap' : (member?.displayName || 'User')}**${wakeBadge}: "${sttResult.text}"\n` +
+              `🗣️ **${isCreator ? 'Papa' : (member?.displayName || 'User')}**${wakeBadge}: "${sttResult.text}"\n` +
               `🌸 **Lyraa**${fallbackBadge}: ${sanitizedVoiceReply}\n\n` +
               `_⚡ STT: \`${sttLatency}ms\` | TTFT: \`${ttftMs}ms\` | Suara Pertama: \`${totalVoiceLatency}ms\` | Mode: \`${interactionGate.getMode()}\`${degradedBadge}_`,
             allowedMentions: { parse: [] },
@@ -2370,8 +2378,8 @@ async function handleStatusCommand(interaction: ChatInputCommandInteraction) {
     .setColor(0xff77a9)
     .setTitle('🌸 Status & Kondisi Lyraa Saat Ini ✨')
     .setDescription(
-      `*Hai Papap dan teman-teman! Ini dia catatan kondisi Lyraa sekarang:*\n\n` +
-      `👑 **Papap / Pencipta**: <@640513136503291934> *(Papap Tersayang)*\n` +
+      `*Hai Papa dan teman-teman! Ini dia catatan kondisi Lyraa sekarang:*\n\n` +
+      `👑 **Papa / Pencipta**: <@640513136503291934> *(Papa Tersayang)*\n` +
       `💖 **Suasana Hati (Mood)**: ${mood.emoji} **${mood.name}**\n` +
       `> _"${mood.reason}"_\n\n` +
       `🎙️ **Sistem Suara & Otak Lyraa:**\n` +
@@ -2423,7 +2431,7 @@ async function handlePersonaCommand(interaction: ChatInputCommandInteraction) {
       .setTitle('🎭 Karakter & Persona Lyraa ✨')
       .setDescription(
         `• **Nama**: **Lyraa (Lyra)**\n` +
-        `• **Peran**: Anak manis kesayangan Papap (<@640513136503291934>) & teman nongkrong di Discord!\n` +
+        `• **Peran**: Anak manis kesayangan Papa (<@640513136503291934>) & teman nongkrong di Discord!\n` +
         `• **Versi Persona**: \`${personaManager.getVersion()}\`\n` +
         `• **Few-Shot Examples**: \`${personaManager.getExamples().length} contoh dialog\`\n` +
         `• **Kamus Fonetik**: \`${Object.keys(personaManager.getLexicon()).length} kata terdaftar\`\n` +

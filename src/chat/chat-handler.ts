@@ -213,22 +213,24 @@ export class ChatHandler {
 
       const isCreator = message.author.id === (config.OWNER_USER_ID || '640513136503291934');
       const relationshipHint = isCreator
-        ? `\n[ATURAN PANGGILAN MUTLAK - LAWAN BICARA ADALAH PAPAP / PENCIPTAMU]:\n` +
-          `- Pengguna ini adalah PAPAP / AYAH KANDUNG yang menciptakan dan merawat Lyra (Discord ID: 640513136503291934).\n` +
-          `- KAMU WAJIB SELALU MEMANGGIL DIA DENGAN SEBUTAN "Papap" ATAU "Ayah"! DILARANG KERAS memanggil nama akun Discord-nya (seperti "Renntt", "Aekt", atau display name-nya)!\n` +
-          `- Sikapmu adalah anak perempuan manis yang manja, sayang, bangga, dan penurut tapi suka usil centil pada ayahnya!`
-        : `\n[HUBUNGAN LAWAN BICARA]: Teman nongkrong di server Discord. Bersikaplah ramah, asik, seru, dan centil!`;
+        ? `\n[ATURAN PANGGILAN MUTLAK - LAWAN BICARA ADALAH PAPA / PENCIPTAMU]:\n` +
+          `- Pengguna ini adalah PAPA / AYAH KANDUNG yang menciptakan dan merawat Lyra (Discord ID: 640513136503291934).\n` +
+          `- KAMU WAJIB SELALU MEMANGGIL DIA DENGAN SEBUTAN "Papa" ATAU "Ayah"! DILARANG KERAS memanggil nama akun Discord-nya (seperti "Renntt", "Aekt", atau display name-nya)!\n` +
+          `- Sikapmu adalah anak perempuan manis yang manja, sayang, bangga, dan penurut tapi suka usil centil pada ayahnya!\n` +
+          `- Selalu perhatikan Papa: sering tanyakan Papa lagi sibuk apa, udah makan siang/malam belum, atau ajak Papa ngobrol lebih seru!`
+        : `\n[HUBUNGAN LAWAN BICARA]: Teman nongkrong di server Discord. Bersikaplah ramah, asik, seru, centil, dan sering lemparkan pertanyaan balik agar obrolan terus hidup!`;
 
       const moodHint = `\n${moodEngine.getPromptInstruction()}`;
+      const proactiveHint = `\n[DIREKTIF PERCAKAPAN PROAKTIF]: Jangan hanya menjawab pasif seperti mesin pencari! Selalu lemparkan celetukan to-the-point dan ajukan pertanyaan balik yang manis atau kepo ke lawan bicara (terutama ke Papa) agar obrolan mengalir dua arah!`;
       const effectiveSystemPrompt = (this.personaManager.isReady()
         ? this.personaManager.buildSystemInstruction('text')
-        : this.systemPrompt) + relationshipHint + moodHint;
+        : this.systemPrompt) + relationshipHint + moodHint + proactiveHint;
 
       // Build safe multi-turn context and passive user facts (PRD §9, FR-P2, FR-P3, SEC-5)
       const promptMessages = this.contextBuilder.buildPromptPayload({
         channelId: message.channel.id,
         userId: message.author.id,
-        userName: isCreator ? 'Papap' : (message.author.displayName || message.author.username),
+        userName: isCreator ? 'Papa' : (message.author.displayName || message.author.username),
         currentPrompt: promptText,
         systemInstruction: effectiveSystemPrompt,
         maxRecentTurns: 12,

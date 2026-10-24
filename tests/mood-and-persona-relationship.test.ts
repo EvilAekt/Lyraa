@@ -31,11 +31,11 @@ test('MoodEngine: initializes with playful mood and shifts dynamically', () => {
   engine.processUtterance('Kamu berisik banget deh', 'user-random');
   assert.equal(engine.getMood(), 'bad_mood');
 
-  // 6. Creator (Papap ID: 640513136503291934) speaks -> instantly heals to happy
-  const res3 = engine.processUtterance('Halo anakku Lyra tersayang, Papap dateng nih', '640513136503291934');
+  // 6. Creator (Papa ID: 640513136503291934) speaks -> instantly heals to happy
+  const res3 = engine.processUtterance('Halo anakku Lyra tersayang, Papa dateng nih', '640513136503291934');
   assert.equal(res3.shifted, true);
   assert.equal(engine.getMood(), 'happy');
-  assert.ok(engine.getMoodDetails().reason.includes('Papap'));
+  assert.ok(engine.getMoodDetails().reason.includes('Papa') || engine.getMoodDetails().reason.includes('Papap'));
 });
 
 test('MoodEngine: manual mood setting and details inspection', () => {
@@ -52,20 +52,20 @@ test('MoodEngine: manual mood setting and details inspection', () => {
   assert.equal(engine.getMoodDetails().emoji, '☕');
 });
 
-test('Persona: character and rules reflect daughter relationship with Papap (ID: 640513136503291934)', async () => {
+test('Persona: character and rules reflect daughter relationship with Papa (ID: 640513136503291934)', async () => {
   const persona = getPersonaManager();
   await persona.load();
 
   const character = persona.getCharacter();
   assert.ok(character.includes('640513136503291934'), 'Character must reference creator ID');
-  assert.ok(character.includes('Papap') || character.includes('anak perempuan'), 'Character must define daughter role');
+  assert.ok(character.includes('Papa') || character.includes('anak perempuan'), 'Character must define daughter role');
 
   const rules = persona.getRules();
   assert.ok(rules.includes('640513136503291934'), 'Rules must reference creator ID for identity honesty');
 
   const examples = persona.getExamples();
   assert.ok(
-    examples.some((ex) => ex.input.includes('Siapa yang bikin kamu') || ex.output.includes('Papap')),
+    examples.some((ex) => ex.input.includes('Siapa yang bikin kamu') || ex.output.includes('Papa')),
     'Examples must contain creator relationship sample'
   );
 });

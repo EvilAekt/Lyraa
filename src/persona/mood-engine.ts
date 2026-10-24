@@ -163,11 +163,11 @@ export class MoodEngine {
     const lower = (text || '').toLowerCase();
     this.turnCountSinceShift++;
 
-    // 1. Interaction with Creator / Papap
+    // 1. Interaction with Creator / Papa
     if (userId === this.creatorDiscordId) {
       if (this.currentMood === 'bad_mood') {
         this.currentMood = 'happy';
-        this.moodReason = 'Dibujuk dan disapa sama Papap tercinta, langsung luluh deh!';
+        this.moodReason = 'Dibujuk dan disapa sama Papa tercinta, langsung luluh deh!';
         this.lastShiftTime = Date.now();
         console.log(`[MoodEngine] Creator interaction healed bad_mood -> happy`);
         return { shifted: true, oldMood, newMood: this.currentMood };

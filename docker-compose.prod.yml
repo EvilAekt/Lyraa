@@ -1,0 +1,62 @@
+# Production Docker Compose for Bot-AI (Jalur 2: VPS Mandiri Singapura)
+# Implements PRD §15 Task T7.1, TDD §13, and SEC-11 / SEC-14.
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bot-ai:latest
+    container_name: bot-ai-production
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - HEALTH_PORT=8080
+      - BOT_ENABLED=true
+      - MEMORY_DB_URL=file:/app/data/memory.sqlite
+    ports:
+      # Expose healthcheck endpoint strictly to localhost loopback (SEC-11, SEC-12)
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # Persistent SQLite memory database and data directory
+      - ./data:/app/data
+      # Application logs
+      - ./logs:/app/logs
+      # Encrypted daily backups
+      - ./backups:/app/backups
+    deploy:
+      resources:
+        limits:
+          cpus: '1.50'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    stop_grace_period: 15s
+
+  daily-backup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bot-ai:latest
+    container_name: bot-ai-daily-backup
+    restart: "no"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data:ro
+      - ./backups:/app/backups
+    entrypoint: ["/usr/bin/dumb-init", "--"]
+    command: ["node", "-e", "import('./dist/scripts/backup-db.js').then(m => m.createDatabaseBackup({ sourceDbPath: 'data/memory.sqlite', backupDir: 'backups', retentionDays: 30 }))"]

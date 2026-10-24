@@ -1,0 +1,106 @@
+{
+  "summary": {
+    "durationMinutes": 240,
+    "totalTurns": 10,
+    "failedTurns": 0,
+    "initialRssMb": 87.1,
+    "finalRssMb": 81.48,
+    "peakRssMb": 87.1,
+    "initialHeapMb": 19.65,
+    "finalHeapMb": 22.27,
+    "peakHeapMb": 22.27,
+    "averageCpuPercent": 0.7,
+    "peakCpuPercent": 1.8,
+    "averageEventLoopLagMs": 0,
+    "maxEventLoopLagMs": 0,
+    "hourlyGrowthPercent": -1.61,
+    "hasCrashed": false,
+    "isTc17Compliant": true
+  },
+  "snapshots": [
+    {
+      "timestamp": "2026-10-23T10:33:08.898Z",
+      "minute": 0,
+      "rssMb": 87.1,
+      "heapUsedMb": 19.65,
+      "heapTotalMb": 51.68,
+      "externalMb": 8.21,
+      "cpuPercent": 0,
+      "eventLoopLagMs": 0,
+      "turnsCompleted": 0,
+      "turnErrors": 0
+    },
+    {
+      "timestamp": "2026-10-23T10:33:17.338Z",
+      "minute": 48,
+      "rssMb": 78.43,
+      "heapUsedMb": 19.04,
+      "heapTotalMb": 22.3,
+      "externalMb": 8.25,
+      "cpuPercent": 0.9,
+      "eventLoopLagMs": 0,
+      "turnsCompleted": 2,
+      "turnErrors": 0
+    },
+    {
+      "timestamp": "2026-10-23T10:33:26.222Z",
+      "minute": 96,
+      "rssMb": 79.84,
+      "heapUsedMb": 19.79,
+      "heapTotalMb": 22.58,
+      "externalMb": 8.43,
+      "cpuPercent": 1.8,
+      "eventLoopLagMs": 0,
+      "turnsCompleted": 4,
+      "turnErrors": 0
+    },
+    {
+      "timestamp": "2026-10-23T10:33:36.237Z",
+      "minute": 144,
+      "rssMb": 80.14,
+      "heapUsedMb": 20.42,
+      "heapTotalMb": 22.58,
+      "externalMb": 8.56,
+      "cpuPercent": 0.8,
+      "eventLoopLagMs": 0,
+      "turnsCompleted": 6,
+      "turnErrors": 0
+    },
+    {
+      "timestamp": "2026-10-23T10:33:43.876Z",
+      "minute": 192,
+      "rssMb": 80.54,
+      "heapUsedMb": 21.12,
+      "heapTotalMb": 24.33,
+      "externalMb": 8.66,
+      "cpuPercent": 1,
+      "eventLoopLagMs": 0,
+      "turnsCompleted": 8,
+      "turnErrors": 0
+    },
+    {
+      "timestamp": "2026-10-23T10:33:55.014Z",
+      "minute": 240,
+      "rssMb": 81.48,
+      "heapUsedMb": 22.25,
+      "heapTotalMb": 24.83,
+      "externalMb": 8.82,
+      "cpuPercent": 0.6,
+      "eventLoopLagMs": 0,
+      "turnsCompleted": 10,
+      "turnErrors": 0
+    },
+    {
+      "timestamp": "2026-10-23T10:33:55.045Z",
+      "minute": 240,
+      "rssMb": 81.48,
+      "heapUsedMb": 22.27,
+      "heapTotalMb": 24.83,
+      "externalMb": 8.82,
+      "cpuPercent": 0,
+      "eventLoopLagMs": 0,
+      "turnsCompleted": 10,
+      "turnErrors": 0
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+# Secrets and local environments (SEC-1, SEC-2)
+.env
+.env.*
+*.env
+!.env.example
+
+# Git version control
+.git
+.gitignore
+
+# Dependencies & Build artifacts
+node_modules
+dist
+coverage
+npm-debug.log*
+
+# Runtime data & Persistent logs
+data/
+logs/
+debug_audio/
+fixtures/audio/
+fixtures/backup-test/
+
+# Local docs & Development configurations
+docs/perf/*.json
+.agents/
+.vscode/
+.idea/
+.gemini/
+
+# Test directories and fixtures not needed in production container
+tests/
+fixtures/
+scripts/

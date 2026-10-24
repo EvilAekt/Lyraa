@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Lyra VTuber AI - Stage OBS Overlay</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    #stage-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 30px;
+    }
+
+    /* Avatar Canvas / Visual Container */
+    #avatar-wrapper {
+      position: relative;
+      width: 480px;
+      height: 600px;
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    /* SVG Character Rigging for Responsive OBS Overlay */
+    svg#lyra-rig {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 8px 24px rgba(0,0,0,0.25));
+    }
+
+    /* Subtitle / Speech Bubble Overlay */
+    #speech-bubble {
+      position: absolute;
+      top: 40px;
+      max-width: 420px;
+      background: rgba(22, 24, 30, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 14px 20px;
+      color: #fff;
+      font-size: 16px;
+      line-height: 1.4;
+      opacity: 0;
+      transform: translateY(10px) scale(0.95);
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      pointer-events: none;
+    }
+
+    #speech-bubble.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    #bubble-author {
+      font-weight: 700;
+      color: #79c0ff;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    /* Status indicator on top corner */
+    #connection-badge {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(0,0,0,0.6);
+      color: #8b949e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #connection-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f85149;
+    }
+
+    #connection-badge.connected #connection-dot {
+      background: #3fb950;
+      box-shadow: 0 0 8px #3fb950;
+    }
+
+    #connection-badge.connected {
+      color: #e6edf3;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage-container">
+    <div id="connection-badge">
+      <div id="connection-dot"></div>
+      <span id="connection-text">Connecting...</span>
+    </div>
+
+    <div id="speech-bubble">
+      <div id="bubble-author">Lyra AI</div>
+      <div id="bubble-text">Halo! Aku Lyra, siap mengobrol di voice channel.</div>
+    </div>
+
+    <div id="avatar-wrapper">
+      <svg id="lyra-rig" viewBox="0 0 400 500">
+        <defs>
+          <linearGradient id="hair-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ff9a9e" />
+            <stop offset="100%" stop-color="#fecfef" />
+          </linearGradient>
+          <linearGradient id="skin-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#fff0e6" />
+            <stop offset="100%" stop-color="#ffe4d4" />
+          </linearGradient>
+          <linearGradient id="eye-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#58a6ff" />
+            <stop offset="100%" stop-color="#1f6feb" />
+          </linearGradient>
+        </defs>
+
+        <!-- Body & Shoulders -->
+        <g id="body-group">
+          <path d="M 120 450 Q 200 420 280 450 L 320 500 L 80 500 Z" fill="#2d333b" />
+          <path d="M 150 435 Q 200 450 250 435 L 260 500 L 140 500 Z" fill="#fecfef" opacity="0.6" />
+          <path d="M 180 330 L 220 330 L 225 390 L 175 390 Z" fill="url(#skin-grad)" />
+        </g>
+
+        <!-- Head Group -->
+        <g id="head-group">
+          <!-- Back Hair -->
+          <path d="M 80 200 C 60 380 120 420 140 430 C 260 430 340 380 320 200 C 310 80 90 80 80 200 Z" fill="url(#hair-grad)" />
+          
+          <!-- Face Base -->
+          <path d="M 110 180 C 110 320 200 350 200 350 C 200 350 290 320 290 180 C 290 100 110 100 110 180 Z" fill="url(#skin-grad)" />
+
+          <!-- Cheeks Blush -->
+          <circle id="blush-left" cx="140" cy="245" r="14" fill="#ff7b72" opacity="0.3" />
+          <circle id="blush-right" cx="260" cy="245" r="14" fill="#ff7b72" opacity="0.3" />
+
+          <!-- Eyes Group -->
+          <g id="eyes-group">
+            <!-- Left Eye -->
+            <g id="left-eye">
+              <ellipse cx="155" cy="210" rx="18" ry="24" fill="#ffffff" />
+              <ellipse id="left-pupil" cx="155" cy="210" rx="14" ry="18" fill="url(#eye-grad)" />
+              <circle cx="150" cy="202" r="6" fill="#ffffff" />
+              <circle cx="160" cy="218" r="3" fill="#ffffff" />
+              <path id="left-eyelid" d="M 132 195 Q 155 185 178 195" stroke="#24292f" stroke-width="4" fill="none" stroke-linecap="round" />
+            </g>
+
+            <!-- Right Eye -->
+            <g id="right-eye">
+              <ellipse cx="245" cy="210" rx="18" ry="24" fill="#ffffff" />
+              <ellipse id="right-pupil" cx="245" cy="210" rx="14" ry="18" fill="url(#eye-grad)" />
+              <circle cx="240" cy="202" r="6" fill="#ffffff" />
+              <circle cx="250" cy="218" r="3" fill="#ffffff" />
+              <path id="right-eyelid" d="M 222 195 Q 245 185 268 195" stroke="#24292f" stroke-width="4" fill="none" stroke-linecap="round" />
+            </g>
+          </g>
+
+          <!-- Eyebrows -->
+          <path id="brow-left" d="M 135 175 Q 155 168 175 175" stroke="#ff7b72" stroke-width="3.5" fill="none" stroke-linecap="round" />
+          <path id="brow-right" d="M 225 175 Q 245 168 265 175" stroke="#ff7b72" stroke-width="3.5" fill="none" stroke-linecap="round" />
+
+          <!-- Nose -->
+          <path d="M 200 235 L 200 242" stroke="#e0b098" stroke-width="2" stroke-linecap="round" />
+
+          <!-- Mouth (Controlled by Lip-Sync Analyzer) -->
+          <g id="mouth-group">
+            <path id="mouth-path" d="M 188 275 Q 200 282 212 275" stroke="#c05763" stroke-width="3" fill="#ff7b72" stroke-linecap="round" />
+          </g>
+
+          <!-- Front Bangs / Hair -->
+          <path d="M 90 140 Q 150 160 200 130 Q 250 160 310 140 Q 300 80 200 70 Q 100 80 90 140 Z" fill="url(#hair-grad)" />
+          <path d="M 115 130 C 130 190 140 210 145 220 C 150 180 160 160 170 140 Z" fill="url(#hair-grad)" />
+          <path d="M 285 130 C 270 190 260 210 255 220 C 250 180 240 160 230 140 Z" fill="url(#hair-grad)" />
+          <path d="M 180 120 C 195 170 200 190 202 195 C 205 170 210 150 220 120 Z" fill="url(#hair-grad)" />
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <script>
+    const mouthPath = document.getElementById('mouth-path');
+    const browLeft = document.getElementById('brow-left');
+    const browRight = document.getElementById('brow-right');
+    const avatarWrapper = document.getElementById('avatar-wrapper');
+    const speechBubble = document.getElementById('speech-bubble');
+    const bubbleText = document.getElementById('bubble-text');
+    const badge = document.getElementById('connection-badge');
+    const badgeText = document.getElementById('connection-text');
+
+    let isSpeaking = false;
+    let currentEmotion = 'neutral';
+    let targetMouthOpen = 0.0;
+    let currentMouthOpen = 0.0;
+
+    // Expression Presets (VRM mapping)
+    const EXPRESSIONS = {
+      neutral: {
+        mouth: 'M 188 275 Q 200 282 212 275',
+        browLeft: 'M 135 175 Q 155 168 175 175',
+        browRight: 'M 225 175 Q 245 168 265 175',
+        scale: 1.0,
+      },
+      happy: {
+        mouth: 'M 184 272 Q 200 292 216 272',
+        browLeft: 'M 135 170 Q 155 160 175 170',
+        browRight: 'M 225 170 Q 245 160 265 170',
+        scale: 1.03,
+      },
+      surprised: {
+        mouth: 'M 190 270 Q 200 295 210 270',
+        browLeft: 'M 135 165 Q 155 155 175 165',
+        browRight: 'M 225 165 Q 245 155 265 165',
+        scale: 1.05,
+      },
+      sad: {
+        mouth: 'M 188 280 Q 200 273 212 280',
+        browLeft: 'M 135 170 Q 155 178 175 173',
+        browRight: 'M 225 173 Q 245 178 265 170',
+        scale: 0.98,
+      },
+      angry: {
+        mouth: 'M 188 278 Q 200 274 212 278',
+        browLeft: 'M 135 178 Q 155 182 175 170',
+        browRight: 'M 225 170 Q 245 182 265 178',
+        scale: 1.02,
+      },
+      relaxed: {
+        mouth: 'M 188 274 Q 200 280 212 274',
+        browLeft: 'M 135 173 Q 155 169 175 173',
+        browRight: 'M 225 173 Q 245 169 265 173',
+        scale: 1.0,
+      }
+    };
+
+    function applyEmotion(emotionName) {
+      currentEmotion = EXPRESSIONS[emotionName] ? emotionName : 'neutral';
+      const preset = EXPRESSIONS[currentEmotion];
+      browLeft.setAttribute('d', preset.browLeft);
+      browRight.setAttribute('d', preset.browRight);
+      avatarWrapper.style.transform = `scale(${preset.scale})`;
+    }
+
+    // Animation Loop for smooth Lip-Sync Interpolation (60 FPS)
+    function animate() {
+      // Lerp mouth opening
+      currentMouthOpen += (targetMouthOpen - currentMouthOpen) * 0.35;
+      
+      const openHeight = currentMouthOpen * 20; // 0 to 20 px opening
+      const openWidth = currentMouthOpen * 8;   // 0 to 8 px width stretch
+
+      if (currentMouthOpen > 0.05) {
+        mouthPath.setAttribute('d', 
+          `M ${188 - openWidth/2} 272 Q 200 ${280 + openHeight} ${212 + openWidth/2} 272 Z`
+        );
+      } else {
+        const baseMouth = EXPRESSIONS[currentEmotion] ? EXPRESSIONS[currentEmotion].mouth : EXPRESSIONS.neutral.mouth;
+        mouthPath.setAttribute('d', baseMouth);
+      }
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Idle Blinking (every 3-5 seconds)
+    function triggerBlink() {
+      const leftPupil = document.getElementById('left-pupil');
+      const rightPupil = document.getElementById('right-pupil');
+      leftPupil.style.opacity = '0';
+      rightPupil.style.opacity = '0';
+      setTimeout(() => {
+        leftPupil.style.opacity = '1';
+        rightPupil.style.opacity = '1';
+      }, 120);
+      setTimeout(triggerBlink, 3000 + Math.random() * 2500);
+    }
+    setTimeout(triggerBlink, 2000);
+
+    // WebSocket Gateway Connection to Bot Runtime
+    let ws;
+    function connectWs() {
+      const wsUrl = `ws://${window.location.host}/stage/ws`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        badge.classList.add('connected');
+        badgeText.textContent = 'OBS Live';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          
+          if (msg.type === 'speaking_start') {
+            isSpeaking = true;
+            if (msg.emotion) applyEmotion(msg.emotion);
+            if (msg.text) {
+              bubbleText.textContent = msg.text;
+              speechBubble.classList.add('active');
+            }
+          } else if (msg.type === 'speaking_end') {
+            isSpeaking = false;
+            targetMouthOpen = 0.0;
+            applyEmotion('neutral');
+            setTimeout(() => {
+              if (!isSpeaking) speechBubble.classList.remove('active');
+            }, 1800);
+          } else if (msg.type === 'lip_sync') {
+            targetMouthOpen = Math.min(1.0, Math.max(0.0, msg.value || 0.0));
+          } else if (msg.type === 'emotion_change') {
+            applyEmotion(msg.emotion);
+          }
+        } catch (err) {
+          console.warn('WS message parse error:', err);
+        }
+      };
+
+      ws.onclose = () => {
+        badge.classList.remove('connected');
+        badgeText.textContent = 'Disconnected';
+        setTimeout(connectWs, 2000); // Reconnect
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    connectWs();
+  </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+# Blueprint Render Infrastructure-as-Code for Bot-AI (VTuber AI Voice Bot)
+# Implements PRD §15 (Task T5.2), TDD §13 (Jalur 3: Uji Deploy Gratis)
+# Enforces SEC-11 (non-root, health port 8080) and zero secret leak.
+
+services:
+  - type: web
+    name: bot-ai-vtuber
+    runtime: docker
+    plan: free # Render Free Tier: 512 MB RAM, 0.1 vCPU shared, ephemeral disk
+    region: singapore # Nearest region to Indonesia & Discord Voice AP-Southeast
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: false # Manual trigger recommended to prevent unexpected free tier usage
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HEALTH_PORT
+        value: "8080"
+      - key: BOT_ENABLED
+        value: "true"
+      - key: LOG_LEVEL
+        value: info
+      - key: DEBUG_SAVE_AUDIO
+        value: "false"
+
+      # Voice & Interaction settings
+      - key: INTERACTION_MODE
+        value: wake
+      - key: WAKE_WORDS
+        value: "Lyra,Lira,Airi,Bot,Halo"
+      - key: VAD_HANGOVER_MS
+        value: "500"
+      - key: MAX_UTTERANCE_SEC
+        value: "30"
+      - key: MAX_REPLY_SEC
+        value: "20"
+      - key: BARGE_IN_THRESHOLD_MS
+        value: "300"
+
+      # Provider models
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: LLM_MODEL
+        value: gemini-3.5-flash-lite
+      - key: STT_PROVIDER
+        value: gemini
+      - key: STT_MODEL
+        value: gemini-3.5-flash-lite
+      - key: TTS_PROVIDER
+        value: edge-tts
+      - key: TTS_VOICE_ID
+        value: id-ID-GadisNeural
+
+      # Security, Budget & Rate Limiting
+      - key: RATE_LIMIT_PER_MIN
+        value: "6"
+      - key: DAILY_REQUEST_BUDGET
+        value: "1000"
+      - key: DAILY_TOKEN_BUDGET
+        value: "500000"
+      - key: MEMORY_DB_URL
+        value: file:./data/memory.sqlite
+      - key: TRANSCRIPT_RETENTION_DAYS
+        value: "7"
+
+      # Secrets (Must be supplied in Render Dashboard secret environment variables - SEC-1)
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OWNER_USER_ID
+        sync: false
+      - key: DISCORD_GUILD_ALLOWLIST
+        sync: false
+      - key: DISCORD_USER_ALLOWLIST
+        sync: false
+      - key: ADMIN_WEBHOOK_URL
+        sync: false

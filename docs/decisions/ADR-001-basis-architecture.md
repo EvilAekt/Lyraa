@@ -49,3 +49,21 @@ Pemilik proyek memutuskan **OPSI B (Sesuai ADR-001 & PRD §14)**:
 - **Roadmap**: Alur kerja Fase 0 berlanjut ke verifikasi token Discord (**T0.3**), pengujian DAVE E2EE (**T0.4**), dan pengujian latensi streaming Gemini (**T0.5**).
 - **Dependensi**: Workspace tidak perlu menjalankan monorepo AIRI; cukup menjalankan paket mandiri di repo `bot-ai` / `Lyraa`.
 - **Git Remote**: `origin` diarahkan ke `https://github.com/EvilAekt/Lyraa.git`, dengan `airi/` tetap tersedia secara lokal sebagai referensi upstream kode audio.
+
+---
+
+## 5. Hasil Verifikasi Empiris & Phase Gate 0 (GO)
+
+Pada 21 Oktober 2026, seluruh spike empiris Fase 0 telah diselesaikan dengan hasil:
+1. **T0.3 Aplikasi Discord**: Bot `Lyraa#8279` berhasil online dan terhubung ke server pengujian dengan permission aman.
+2. **T0.4 Spike DAVE E2EE (TC-01 & TC-02)**: LULUS.
+   - Handshake DAVE tembus dalam `1.165 ms` tanpa close code 4017.
+   - Perekaman audio suara pengguna (`debug_audio/spike-dave-1792532723045.wav`, durasi 5.72 detik) sukses didekode dengan `opusscript`.
+   - Tercatat lengkap di [docs/decisions/F1-F2.md](file:///g:/bot-ai/docs/decisions/F1-F2.md).
+3. **T0.5 Spike Gemini (F5, F6, F7)**: LULUS.
+   - Streaming LLM (`models/gemini-3.5-flash-lite`): TTFT rata-rata `1.167 ms` (memenuhi budget latensi).
+   - Multimodal STT (`models/gemini-3-flash-preview`): Mentranskripsikan audio WAV nyata suara Senior: *"Test, test, test, test, test. Lira, apakah Lira mendengar audio ini?"* secara 100% akurat dalam `3.283 ms`.
+   - Tercatat lengkap di [docs/decisions/F5-F7.md](file:///g:/bot-ai/docs/decisions/F5-F7.md).
+
+**Kesimpulan Phase Gate 0**: **GO (LOLOS)**. Siap melangkah ke **Fase 1: Loop Suara MVP**!
+

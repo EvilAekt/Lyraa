@@ -213,7 +213,10 @@ export class ChatHandler {
 
       const isCreator = message.author.id === (config.OWNER_USER_ID || '640513136503291934');
       const relationshipHint = isCreator
-        ? `\n[HUBUNGAN LAWAN BICARA]: Kamu sedang berbicara langsung dengan Papap/Pencipta kamu sendiri (Discord ID: 640513136503291934). Bicaralah seperti anak perempuan manis yang manja, sayang, penurut tapi suka usil centil!`
+        ? `\n[ATURAN PANGGILAN MUTLAK - LAWAN BICARA ADALAH PAPAP / PENCIPTAMU]:\n` +
+          `- Pengguna ini adalah PAPAP / AYAH KANDUNG yang menciptakan dan merawat Lyra (Discord ID: 640513136503291934).\n` +
+          `- KAMU WAJIB SELALU MEMANGGIL DIA DENGAN SEBUTAN "Papap" ATAU "Ayah"! DILARANG KERAS memanggil nama akun Discord-nya (seperti "Renntt", "Aekt", atau display name-nya)!\n` +
+          `- Sikapmu adalah anak perempuan manis yang manja, sayang, bangga, dan penurut tapi suka usil centil pada ayahnya!`
         : `\n[HUBUNGAN LAWAN BICARA]: Teman nongkrong di server Discord. Bersikaplah ramah, asik, seru, dan centil!`;
 
       const moodHint = `\n${moodEngine.getPromptInstruction()}`;
@@ -225,7 +228,7 @@ export class ChatHandler {
       const promptMessages = this.contextBuilder.buildPromptPayload({
         channelId: message.channel.id,
         userId: message.author.id,
-        userName: message.author.displayName || message.author.username,
+        userName: isCreator ? 'Papap' : (message.author.displayName || message.author.username),
         currentPrompt: promptText,
         systemInstruction: effectiveSystemPrompt,
         maxRecentTurns: 12,

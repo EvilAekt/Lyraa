@@ -100,14 +100,15 @@ export class AllowlistManager {
   /**
    * Generate formal privacy & consent notice text upon entering voice channel (SEC-9, PRD §8).
    */
-  public formatPrivacyNotice(channelName: string, botName = 'Lyra'): string {
+  public formatPrivacyNotice(channelName: string, botName = 'Lyraa'): string {
     return (
-      `🎙️ **Pengumuman Privasi Suara & Persetujuan (SEC-9)**\n` +
-      `Halo semuanya! **${botName}** telah bergabung ke **${channelName}** dengan enkripsi suara DAVE E2EE.\n\n` +
-      `• **Mendengarkan & Transkripsi**: Aku mendengarkan dan mentranskripsi suara otomatis di channel ini agar dapat menjawab percakapan kalian secara natural.\n` +
-      `• **Pemrosesan Data**: Suara diproses menggunakan model Google Gemini AI. Dilarang membicarakan atau membocorkan data rahasia pribadi (nomor rekening, password, PIN, NIK).\n` +
-      `• **Retensi Audio & Teks**: Audio mentah tidak disimpan ke disk. Transkrip percakapan disimpan maksimal 7 hari dan dapat dihapus kapan saja dengan perintah \`/forget me\`.\n` +
-      `• **Kontrol Penuh**: Ketik \`/leave\` untuk meminta bot keluar, atau \`/mute\` untuk membisukan respons AI.`
+      `🌸 **Hai hai semuanya! ${botName} udah join ke #${channelName}~** ✨\n\n` +
+      `Siap nemenin kalian ngobrol, mabar, dan seru-seruan bareng! Biar obrolan kita asik, ini catatan kecil dari Lyraa ya:\n` +
+      `• 🎙️ **Mendengarkan Percakapan**: Lyraa dengerin suara kalian di voice channel ini biar bisa langsung nyeletuk dan jawab obrolan kalian.\n` +
+      `• 🔒 **Privasi & Keamanan**: Audio suara diproses real-time dengan enkripsi E2EE dan **tidak disimpan**. Jangan sebar password atau data rahasia yaa!\n` +
+      `• 🧹 **Sesi Bersih**: Kalau Lyraa pamit (\`/leave\`), riwayat obrolan sesi langsung di-reset bersih!\n` +
+      `• 💖 **Kontrol Suara**: Mau ganti gaya bicara atau nada bicaraku? Ketik \`/voice panel\` aja ya!\n\n` +
+      `_Ayo seru-seruan bareng Lyraa sekarang juga~!_ 🎀`
     );
   }
 

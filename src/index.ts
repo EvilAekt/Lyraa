@@ -187,11 +187,11 @@ const commands = [
     ),
   new SlashCommandBuilder()
     .setName('voice')
-    .setDescription('Pengaturan suara bot: ElevenLabs, VOICEVOX, atau Edge-TTS')
+    .setDescription('Pengaturan karakter suara Lyraa: ElevenLabs atau Edge-TTS')
     .addSubcommand((sub) =>
       sub
         .setName('switch')
-        .setDescription('Ganti karakter suara aktif (ElevenLabs Suara 1/2, Sayo, Himari, atau Edge-TTS)')
+        .setDescription('Ganti karakter suara aktif (ElevenLabs Suara 1/2 atau Edge-TTS)')
         .addStringOption((opt) =>
           opt
             .setName('speaker')
@@ -201,8 +201,6 @@ const commands = [
               { name: '🎙️ ElevenLabs Suara 1 (Lyra Soft)', value: 'voice1' },
               { name: '🎙️ ElevenLabs Suara 2 (Lyra Sweet)', value: 'voice2' },
               { name: '✨ ElevenLabs Default', value: 'elevenlabs' },
-              { name: '🌸 Sayo (小夜) — Lembut & Ramah (VOICEVOX ID 46)', value: 'sayo' },
-              { name: '🐣 Meimei Himari (冥鳴ひまり) — Lembut & Hangat (VOICEVOX ID 14)', value: 'meimei_himari' },
               { name: '🇮🇩 Lyra Gadis (Edge-TTS Indonesia Default)', value: 'edge' }
             )
         )
@@ -1026,19 +1024,33 @@ function createVoiceSwitchButtons(activeVoiceId?: string) {
   const activeElPreset = ELEVENLABS_PRESETS[currentActivePresetKey] || ELEVENLABS_PRESETS.chibi;
 
   if (isElevenLabs) {
-    currentDescription = `• **Provider Aktif**: \`ElevenLabs Studio Quality\`\n• **Karakter**: **${isVoice2 ? 'Suara 2 (Lyra Sweet)' : 'Suara 1 (Lyra Soft)'}**\n• **Preset Nada**: **${activePreset.name}**\n• **Tuning**: Stability \`${activeElPreset.stability}\`, Style \`${activeElPreset.style}\`, Speed \`${activeElPreset.speed}x\``;
+    currentDescription =
+      `> 🎙️ **Engine**: \`ElevenLabs Studio Quality\`\n` +
+      `> 👑 **Karakter**: **${isVoice2 ? 'Suara 2 (Lyra Sweet)' : 'Suara 1 (Lyra Soft)'}**\n` +
+      `> 🎭 **Preset Nada**: **${activePreset.name}**\n` +
+      `> 🎚️ **Tuning**: Stability \`${activeElPreset.stability}\` • Style \`${activeElPreset.style}\` • Speed \`${activeElPreset.speed}x\``;
   } else {
-    currentDescription = `• **Provider Aktif**: \`Edge-TTS (Indonesia)\`\n• **Preset Nada**: **${activePreset.name}**\n• **Tuning**: Pitch \`+${activePreset.pitch}Hz\`, Speed \`${activePreset.speed}x\``;
+    currentDescription =
+      `> 🎙️ **Engine**: \`Edge-TTS (Indonesia Natural)\`\n` +
+      `> 👑 **Karakter**: **Lyra Gadis (id-ID-GadisNeural)**\n` +
+      `> 🎭 **Preset Nada**: **${activePreset.name}**\n` +
+      `> 🎚️ **Tuning**: Pitch \`+${activePreset.pitch}Hz\` • Speed \`${activePreset.speed}x\``;
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0xff69b4)
-    .setTitle('🎛️ Pusat Kendali Suara & Nada Lyra')
+    .setColor(0xff77a9)
+    .setTitle('🌸 Pusat Suara & Gaya Bicara Lyraa ✨')
     .setDescription(
-      `Pilih gaya bicara atau suara di bawah ini untuk mengubah karakter suara Lyra secara instan:\n\n` +
+      `*Pilih karakter suara dan nada bicara Lyraa di bawah ini untuk mengubah gaya bicaranya secara instan!*\n\n` +
+      `🎀 **Status Suara Aktif Saat Ini:**\n` +
       `${currentDescription}\n\n` +
-      `_Klik salah satu tombol preset nada (Row 1) atau suara ElevenLabs (Row 2)!_`
-    );
+      `╭───────────────────────╮\n` +
+      `  • **Row 1**: Pilihan Preset Nada & Persona Lyraa\n` +
+      `  • **Row 2**: Pilihan Engine Suara (ElevenLabs / Edge-TTS)\n` +
+      `╰───────────────────────╯\n\n` +
+      `_Klik tombol di bawah untuk langsung mencoba suaraku yaa!_ 💖`
+    )
+    .setFooter({ text: 'Lyraa • Anak Manis & Teman Nongkrong Voice Discord 🌸' });
 
   return { embeds: [embed], components: [row1, row2] };
 }
@@ -1257,59 +1269,11 @@ async function handleVoiceCommand(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    const speakerMap: Record<string, number> = {
-      sayo: 46,
-      meimei_himari: 14,
-    };
-
-    const targetSpeakerId = speakerMap[speakerChoice];
-    if (!targetSpeakerId) {
-      await interaction.reply({
-        content: `❌ Speaker tidak dikenal: \`${speakerChoice}\`. Pilihan yang tersedia: \`elevenlabs\`, \`sayo\`, \`meimei_himari\`, atau \`edge\`.`,
-        ephemeral: true,
-        allowedMentions: { parse: [] },
-      });
-      return;
-    }
-
-    try {
-      // Dynamically activate VOICEVOX provider and switch to target speaker
-      const voicevox = activateVoicevoxProvider(targetSpeakerId);
-      phraseAudioCache.clear();
-
-      const speakerName = VOICEVOX_SPEAKER_MAP[targetSpeakerId] || `Speaker #${targetSpeakerId}`;
-
-      await interaction.reply({
-        content:
-          `✅ **Suara VOICEVOX Berhasil Diaktifkan & Diganti!**\n` +
-          `• Karakter: **${speakerName}**\n` +
-          `• Speaker ID: \`${targetSpeakerId}\`\n` +
-          `• Engine: \`${config.VOICEVOX_URL}\`\n` +
-          `_Respon suara berikutnya di voice channel akan menggunakan karakter ini._`,
-        allowedMentions: { parse: [] },
-      });
-
-      if (interaction.guildId) {
-        const connection = getVoiceConnection(interaction.guildId);
-        if (connection) {
-          try {
-            const player = getOrCreateVoicePlayer(interaction.guildId, connection);
-            const sampleText = targetSpeakerId === 46 ? 'こんにちは、小夜です。' : 'こんにちは、冥鳴ひまりです。';
-            const audio = await voicevox.synthesize(sampleText);
-            await player.play(audio, StreamType.Raw);
-          } catch (err: any) {
-            console.warn(`[Bot-AI] Failed to play speaker switch preview: ${err.message}`);
-          }
-        }
-      }
-    } catch (err: any) {
-      console.error('[Bot-AI] Failed to switch to VOICEVOX:', err);
-      await interaction.reply({
-        content: `❌ Gagal mengaktifkan VOICEVOX: ${err.message}. Pastikan aplikasi VOICEVOX sedang berjalan di port 50021.`,
-        ephemeral: true,
-        allowedMentions: { parse: [] },
-      });
-    }
+    await interaction.reply({
+      content: `❌ Pilihan tidak dikenal: \`${speakerChoice}\`. Pilihan yang tersedia: \`voice1\`, \`voice2\`, \`elevenlabs\`, atau \`edge\`.`,
+      ephemeral: true,
+      allowedMentions: { parse: [] },
+    });
     return;
   }
 
@@ -1317,41 +1281,26 @@ async function handleVoiceCommand(interaction: ChatInputCommandInteraction) {
   if (subcommand === 'list') {
     const tts = getTtsProvider();
     const isElevenLabs = tts instanceof ElevenLabsTtsProvider;
-    const isVoicevox = tts instanceof VoicevoxTtsProvider;
-    const voicevox = getVoicevoxProvider();
     const activeVoice = tts.getVoiceName();
 
-    let providerLabel = 'Edge TTS (Neural)';
-    if (isElevenLabs) providerLabel = 'ElevenLabs (Studio Quality)';
-    else if (isVoicevox) providerLabel = 'VOICEVOX (Lokal)';
-
-    let content = `🎙️ **Daftar Suara & Karakter Bot-AI**\n\n`;
-    content += `• **Provider Aktif**: \`${providerLabel}\`\n`;
-    content += `• **Suara Aktif Saat Ini**: **${activeVoice}**\n\n`;
-
-    content += `**✨ ElevenLabs Cloud (Dual Custom Voice):**\n`;
-    content += `1. **Suara 1 (Lyra Soft)**: \`${config.ELEVENLABS_VOICE_ID}\` ${isElevenLabs && tts.getVoiceId() === config.ELEVENLABS_VOICE_ID ? '✅ *(Aktif)*' : ''}\n`;
-    content += `2. **Suara 2 (Lyra Sweet)**: \`${config.ELEVENLABS_VOICE_ID_2}\` ${isElevenLabs && tts.getVoiceId() === config.ELEVENLABS_VOICE_ID_2 ? '✅ *(Aktif)*' : ''}\n`;
-    content += `  _Model: ${config.ELEVENLABS_MODEL_ID} (Bahasa Indonesia, Jepang, & Inggris)_\n\n`;
-
-    content += `**🇯🇵 VOICEVOX (Lokal - Sayo & Meimei Himari):**\n`;
-    content += `1. **Sayo (小夜) — Normal** (ID: \`46\`) ${isVoicevox && voicevox.getCurrentSpeakerId() === 46 ? '✅ *(Aktif)*' : ''}\n`;
-    content += `   _Deskripsi: Suara lembut, tenang, dan ramah._\n`;
-    content += `2. **Meimei Himari (冥鳴ひまり) — Normal** (ID: \`14\`) ${isVoicevox && voicevox.getCurrentSpeakerId() === 14 ? '✅ *(Aktif)*' : ''}\n`;
-    content += `   _Deskripsi: Suara lembut, hangat, dan manis._\n\n`;
-
-    content += `**🇮🇩 Edge-TTS (Indonesia):**\n`;
-    content += `• **id-ID-GadisNeural** ${!isVoicevox && !isElevenLabs ? '✅ *(Aktif)*' : ''}\n`;
-    for (const [key, p] of Object.entries(VOICE_PRESETS)) {
-      content += `  - Preset \`${key}\`: ${p.name} (Pitch: +${p.pitch}Hz, Speed: ${p.speed}x)\n`;
-    }
-
-    content += `\n_Gunakan \`/voice panel\` untuk membuka tombol pilihan suara secara visual!_`;
+    const embed = new EmbedBuilder()
+      .setColor(0xff77a9)
+      .setTitle('🌸 Daftar Karakter Suara Lyraa ✨')
+      .setDescription(
+        `• **Engine Aktif**: \`${isElevenLabs ? 'ElevenLabs Studio Quality' : 'Edge-TTS (Indonesia Natural)'}\`\n` +
+        `• **Suara Aktif**: **${activeVoice}**\n\n` +
+        `🎀 **Pilihan Suara Resmi Lyraa:**\n` +
+        `1. **ElevenLabs Suara 1 (Lyra Soft)**: \`${config.ELEVENLABS_VOICE_ID}\` ${isElevenLabs && tts.getVoiceId() === config.ELEVENLABS_VOICE_ID ? '✅ *(Aktif)*' : ''}\n` +
+        `2. **ElevenLabs Suara 2 (Lyra Sweet)**: \`${config.ELEVENLABS_VOICE_ID_2}\` ${isElevenLabs && tts.getVoiceId() === config.ELEVENLABS_VOICE_ID_2 ? '✅ *(Aktif)*' : ''}\n` +
+        `3. **Edge-TTS Indonesia (Lyra Gadis)**: \`id-ID-GadisNeural\` ${!isElevenLabs ? '✅ *(Aktif)*' : ''}\n\n` +
+        `_Gunakan \`/voice panel\` untuk memilih tombol suara dan preset nada secara visual!_`
+      )
+      .setFooter({ text: 'Lyraa • Anak Manis & Teman Nongkrong Voice Discord 🌸' });
 
     const panel = createVoiceSwitchButtons(isElevenLabs ? tts.getVoiceId() : undefined);
     await interaction.reply({
-      content,
-      components: isElevenLabs ? panel.components : [],
+      embeds: [embed],
+      components: panel.components,
       allowedMentions: { parse: [] },
     });
     return;
@@ -1361,27 +1310,21 @@ async function handleVoiceCommand(interaction: ChatInputCommandInteraction) {
   if (subcommand === 'current') {
     const tts = getTtsProvider();
     const isElevenLabs = tts instanceof ElevenLabsTtsProvider;
-    const isVoicevox = tts instanceof VoicevoxTtsProvider;
-    const voicevox = getVoicevoxProvider();
 
-    let providerLabel = 'Edge TTS (Neural)';
-    if (isElevenLabs) providerLabel = 'ElevenLabs (Studio Quality)';
-    else if (isVoicevox) providerLabel = 'VOICEVOX (Lokal)';
-
-    let details = `• **Suara Aktif**: **${tts.getVoiceName()}**\n• **Provider**: \`${providerLabel}\``;
-    if (isElevenLabs) {
-      const isVoice2 = tts.getVoiceId() === config.ELEVENLABS_VOICE_ID_2;
-      details += `\n• **Karakter**: **${isVoice2 ? 'Suara 2 (Lyra Sweet)' : 'Suara 1 (Lyra Soft)'}**`;
-      details += `\n• **Voice ID**: \`${tts.getVoiceId()}\``;
-      details += `\n• **Model**: \`${config.ELEVENLABS_MODEL_ID}\``;
-      details += `\n• **Format**: \`${config.ELEVENLABS_OUTPUT_FORMAT}\``;
-    } else if (isVoicevox) {
-      details += `\n• **VOICEVOX Speaker ID**: \`${voicevox.getCurrentSpeakerId()}\``;
-      details += `\n• **Engine URL**: \`${config.VOICEVOX_URL}\``;
-    }
+    const embed = new EmbedBuilder()
+      .setColor(0xff77a9)
+      .setTitle('🔊 Karakter Suara Lyraa Aktif Saat Ini')
+      .setDescription(
+        `• **Engine**: \`${isElevenLabs ? 'ElevenLabs Studio Quality' : 'Edge-TTS (Indonesia Natural)'}\`\n` +
+        `• **Suara**: **${tts.getVoiceName()}**\n` +
+        (isElevenLabs
+          ? `• **Preset Voice ID**: \`${tts.getVoiceId()}\`\n• **Model**: \`${config.ELEVENLABS_MODEL_ID}\``
+          : `• **Voice ID**: \`id-ID-GadisNeural\``)
+      )
+      .setFooter({ text: 'Lyraa • Teman Nongkrong Voice Discord 🌸' });
 
     await interaction.reply({
-      content: `🔊 **Informasi Suara Aktif Saat Ini:**\n${details}`,
+      embeds: [embed],
       allowedMentions: { parse: [] },
     });
     return;
@@ -1492,59 +1435,32 @@ async function handlePrefixVoice(message: Message, arg: string) {
     return;
   }
 
-  // Handle prefix switch: !voice sayo / !voice himari
-  if (trimmed === 'sayo' || trimmed === 'switch sayo') {
-    try {
-      activateVoicevoxProvider(46);
-      phraseAudioCache.clear();
-      await message.reply({
-        content: `✅ Suara diganti ke **Sayo (小夜) — Normal** (VOICEVOX ID: 46)!`,
-        allowedMentions: { parse: [] },
-      });
-    } catch (err: any) {
-      await message.reply({
-        content: `❌ Gagal mengaktifkan VOICEVOX: ${err.message}`,
-        allowedMentions: { parse: [] },
-      });
-    }
-    return;
-  }
-
-  if (trimmed === 'himari' || trimmed === 'meimei_himari' || trimmed === 'switch himari' || trimmed === 'switch meimei_himari') {
-    try {
-      activateVoicevoxProvider(14);
-      phraseAudioCache.clear();
-      await message.reply({
-        content: `✅ Suara diganti ke **Meimei Himari (冥鳴ひまり) — Normal** (VOICEVOX ID: 14)!`,
-        allowedMentions: { parse: [] },
-      });
-    } catch (err: any) {
-      await message.reply({
-        content: `❌ Gagal mengaktifkan VOICEVOX: ${err.message}`,
-        allowedMentions: { parse: [] },
-      });
-    }
-    return;
-  }
-
   if (trimmed === 'list') {
     const tts = getTtsProvider();
-    await message.reply({
-      content:
-        `🎙️ **Daftar Suara**: \n` +
-        `• Aktif: **${tts.getVoiceName()}**\n` +
-        `• VOICEVOX: \`sayo\` (ID 46), \`himari\` (ID 14)\n` +
-        `• Edge TTS: \`edge\`, atau preset: \`cute\`, \`chibi\`, \`energetic\`, \`cozy\`, \`standard\`\n` +
-        `_Contoh: \`!voice sayo\`, \`!voice himari\`, atau \`!voice edge\`_`,
-      allowedMentions: { parse: [] },
-    });
+    const isElevenLabs = tts instanceof ElevenLabsTtsProvider;
+    const embed = new EmbedBuilder()
+      .setColor(0xff77a9)
+      .setTitle('🌸 Daftar Karakter Suara Lyraa ✨')
+      .setDescription(
+        `• **Engine Aktif**: \`${isElevenLabs ? 'ElevenLabs Studio Quality' : 'Edge-TTS (Indonesia Natural)'}\`\n` +
+        `• **Suara Aktif**: **${tts.getVoiceName()}**\n\n` +
+        `🎀 **Pilihan Suara:**\n` +
+        `1. \`!voice 1\` -> ElevenLabs Suara 1 (Lyra Soft)\n` +
+        `2. \`!voice 2\` -> ElevenLabs Suara 2 (Lyra Sweet)\n` +
+        `3. \`!voice edge\` -> Edge-TTS Indonesia (Lyra Gadis)\n\n` +
+        `🎭 **Preset Nada:** \`chibi\`, \`tsundere\`, \`cute\`, \`sweet\`, \`hyper\`, \`energetic\`, \`cozy\`\n` +
+        `_Contoh: \`!voice 1\` atau \`!voice chibi\`_`
+      )
+      .setFooter({ text: 'Lyraa • Teman Nongkrong Voice Discord 🌸' });
+
+    await message.reply({ embeds: [embed], allowedMentions: { parse: [] } });
     return;
   }
 
   if (trimmed === 'current') {
     const tts = getTtsProvider();
     await message.reply({
-      content: `🔊 Suara aktif saat ini: **${tts.getVoiceName()}**`,
+      content: `🔊 Suara aktif Lyraa saat ini: **${tts.getVoiceName()}**`,
       allowedMentions: { parse: [] },
     });
     return;
@@ -1561,10 +1477,9 @@ async function handlePrefixVoice(message: Message, arg: string) {
     await message.reply({
       content:
         `❓ Pilihan tidak dikenal. Silakan pilih:\n` +
-        `• VOICEVOX: \`sayo\`, \`himari\`\n` +
-        `• Edge TTS: \`edge\`\n` +
-        `• Preset: \n• ${available}\n\n` +
-        `Contoh: \`!voice sayo\` atau \`!voice cute\``,
+        `• Suara: \`!voice 1\`, \`!voice 2\`, \`!voice edge\`\n` +
+        `• Preset Nada: \n• ${available}\n\n` +
+        `Contoh: \`!voice 1\` atau \`!voice chibi\``,
       allowedMentions: { parse: [] },
     });
     return;
@@ -2039,11 +1954,20 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
 
         const isCreator = userId === (config.OWNER_USER_ID || '640513136503291934');
         const relationshipHint = isCreator
-          ? `\n[HUBUNGAN LAWAN BICARA]: Kamu sedang berbicara langsung dengan Papap/Pencipta kamu sendiri (Discord ID: 640513136503291934). Bicaralah seperti anak perempuan manis yang manja, sayang, penurut tapi suka usil centil!`
+          ? `\n[ATURAN PANGGILAN MUTLAK - LAWAN BICARA ADALAH PAPAP / PENCIPTAMU]:\n` +
+            `- Lawan bicaramu adalah PAPAP/AYAH KANDUNG yang menciptakan dan merawat Lyra (Discord ID: 640513136503291934).\n` +
+            `- KAMU WAJIB SELALU MEMANGGIL DIA DENGAN SEBUTAN "Papap" ATAU "Ayah"! DILARANG KERAS memanggil nama akun Discord-nya (seperti "Renntt", "Renntt [aepka]", "Aekt", atau display name-nya)!\n` +
+            `- DALAM PRESET APAPUN (Termasuk Tsundere atau Bad Mood), kamu TETAP TAHU dia adalah Papap tersayangmu! Jika sedang mode tsundere atau bad mood, sikapmu adalah ANAK GADIS YANG MERAJUK MANJA KE AYAHNYA ("Ihh Papap apaan sih!", "Papap mah gak peka banget!", "B-bukan berarti Lyra butuh bantuan Papap ya!"), BUKAN judes seperti ke orang asing!\n` +
+            `- Bersikaplah manja, sayang, bangga, dan gemas pada Papap!`
           : `\n[HUBUNGAN LAWAN BICARA]: Teman nongkrong di server Discord. Bersikaplah ramah, asik, seru, dan centil!`;
 
         const moodHint = `\n${moodEngine.getPromptInstruction()}`;
-        const toneHint = currentActiveTonePrompt ? `\n[NADA BICARA AKTIF]: ${currentActiveTonePrompt}` : '';
+        let toneHint = currentActiveTonePrompt ? `\n[NADA BICARA AKTIF]: ${currentActiveTonePrompt}` : '';
+        if (isCreator && currentActivePresetKey === 'tsundere') {
+          toneHint =
+            '\n[NADA BICARA AKTIF]: Kamu sedang mode tsundere manja ke Papap! Merajuk gemas ala anak gadis kesayangan ke ayahnya ("Ihh Papap mah gitu!", "Papap gak peka deh!"), tapi tetap sayang dan WAJIB memanggil Papap!';
+        }
+
         const baseVoicePrompt = (personaManager.isReady()
           ? personaManager.buildSystemInstruction('voice')
           : 'Kamu adalah Lyra, anak perempuan centil, imut, dan cerdik teman nongkrong di Discord. SANGAT PENTING: Berikan celetukan SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.') + relationshipHint + moodHint + toneHint;
@@ -2061,7 +1985,8 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
 
         // Masukkan riwayat multi-turn ke dalam konteks LLM (termasuk percakapan ruangan pasif)
         for (const turn of recentTurns) {
-          const speakerName = turn.userName || 'Teman';
+          const isTurnCreator = turn.userId === (config.OWNER_USER_ID || '640513136503291934');
+          const speakerName = isTurnCreator ? 'Papap' : (turn.userName || 'Teman');
           const isPassiveTurn = !turn.botReply || turn.botReply.trim().length === 0;
 
           voiceMessages.push({
@@ -2080,8 +2005,8 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
           }
         }
 
-        // Kalimat pengguna saat ini dengan label nama pembicara
-        const currentSpeaker = member?.displayName || 'Teman';
+        // Kalimat pengguna saat ini dengan label nama pembicara (Papap jika creator)
+        const currentSpeaker = isCreator ? 'Papap' : (member?.displayName || 'Teman');
         voiceMessages.push({
           role: 'user',
           text: wrapUntrustedData(`[${currentSpeaker}]: ${gateResult.cleanedText}`, 'VOICE_UTTERANCE'),
@@ -2239,7 +2164,7 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
             sessionId: `voice-${connection.joinConfig.guildId}`,
             channelId: textChannel?.id || connection.joinConfig.channelId || 'voice',
             userId,
-            userName: member?.displayName,
+            userName: isCreator ? 'Papap' : member?.displayName,
             userInput: sttResult.text,
             botReply: sanitizedVoiceReply,
             turnLatencyMs: totalVoiceLatency,
@@ -2257,8 +2182,8 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
           const degradedBadge = isVoiceDegraded ? ' | 📉 *Hemat Kuota*' : '';
           await textChannel.send({
             content:
-              `🗣️ **${member?.displayName || 'User'}**${wakeBadge}: "${sttResult.text}"\n` +
-              `🤖 **Lyra**${fallbackBadge}: ${sanitizedVoiceReply}\n\n` +
+              `🗣️ **${isCreator ? 'Papap' : (member?.displayName || 'User')}**${wakeBadge}: "${sttResult.text}"\n` +
+              `🌸 **Lyraa**${fallbackBadge}: ${sanitizedVoiceReply}\n\n` +
               `_⚡ STT: \`${sttLatency}ms\` | TTFT: \`${ttftMs}ms\` | Suara Pertama: \`${totalVoiceLatency}ms\` | Mode: \`${interactionGate.getMode()}\`${degradedBadge}_`,
             allowedMentions: { parse: [] },
           });
@@ -2431,35 +2356,40 @@ async function handleLeaveCommand(interaction: ChatInputCommandInteraction) {
 
 async function handleStatusCommand(interaction: ChatInputCommandInteraction) {
   const uptime = Math.floor(process.uptime());
+  const hours = Math.floor(uptime / 3600);
+  const minutes = Math.floor((uptime % 3600) / 60);
+  const seconds = uptime % 60;
+  const uptimeString = `${hours > 0 ? `${hours} jam ` : ''}${minutes} menit ${seconds} detik`;
+
   const memUsageMb = Math.round(process.memoryUsage().rss / 1024 / 1024);
   const latencySummary = latencyTracker.getSummary();
-  const totalReconnects = voiceConnectionManager.getTotalReconnects();
-  const budgetStats = budgetManager.getStats();
+  const mood = moodEngine.getMoodDetails();
+  const tts = getTtsProvider();
+
+  const embed = new EmbedBuilder()
+    .setColor(0xff77a9)
+    .setTitle('🌸 Status & Kondisi Lyraa Saat Ini ✨')
+    .setDescription(
+      `*Hai Papap dan teman-teman! Ini dia catatan kondisi Lyraa sekarang:*\n\n` +
+      `👑 **Papap / Pencipta**: <@640513136503291934> *(Papap Tersayang)*\n` +
+      `💖 **Suasana Hati (Mood)**: ${mood.emoji} **${mood.name}**\n` +
+      `> _"${mood.reason}"_\n\n` +
+      `🎙️ **Sistem Suara & Otak Lyraa:**\n` +
+      `• **Engine TTS**: \`${tts.getVoiceName()}\` (Preset: \`${currentActivePresetKey}\`)\n` +
+      `• **Model Pikiran (LLM)**: \`${config.LLM_MODEL}\`\n` +
+      `• **Pendengaran (STT)**: \`${config.STT_MODEL}\`\n` +
+      `• **Mode Bicara**: \`${interactionGate.getMode()}\` (Wake Words: \`${interactionGate.getWakeWords().join(', ')}\`)\n\n` +
+      `⚡ **Performa & Kecepatan Respons:**\n` +
+      `• **Latensi Total Suara (p50)**: \`${latencySummary.total.p50}ms\` | **p95**: \`${latencySummary.total.p95}ms\`\n` +
+      `• **Total Obrolan Selesai**: \`${latencySummary.totalTurns} percakapan\`\n` +
+      `• **Uptime Aktif**: \`${uptimeString}\`\n` +
+      `• **Memori Server**: \`${memUsageMb} MB\`\n` +
+      `• **Status Kill Switch**: \`${config.BOT_ENABLED ? '🟢 Aktif & Ceria' : '🔴 Sedang Muted'}\``
+    )
+    .setFooter({ text: 'Lyraa • Anak Manis & Teman Nongkrong Voice Discord 🎀' });
 
   await interaction.reply({
-    content:
-      `📊 **Status Bot-AI**\n` +
-      `- **Uptime**: ${uptime}s\n` +
-      `- **Memory (RSS)**: ${memUsageMb} MB\n` +
-      `- **LLM Model**: \`${config.LLM_MODEL}\`\n` +
-      `- **STT Model**: \`${config.STT_MODEL}\`\n` +
-      `- **TTS Voice**: \`${getTtsProvider().getVoiceName()}\`\n` +
-      `- **Persona Aktif**: \`${personaManager.getVersion()}\` (${personaManager.getExamples().length} examples, ${Object.keys(personaManager.getLexicon()).length} lexicon)\n` +
-      `- **Mode Interaksi**: \`${interactionGate.getMode()}\`\n` +
-      `- **Wake Words**: \`${interactionGate.getWakeWords().join(', ')}\`\n` +
-      `- **VAD Hangover**: \`${config.VAD_HANGOVER_MS}ms\`\n` +
-      `- **Total Turn Selesai**: \`${latencySummary.totalTurns}\`\n` +
-      `- **Latensi Total (t0..t5)**: p50=\`${latencySummary.total.p50}ms\` | p95=\`${latencySummary.total.p95}ms\` (Target: p50 ≤ 2.0s)\n` +
-      `- **Breakdown p50**: STT=\`${latencySummary.stt.p50}ms\` | TTFT=\`${latencySummary.llmTtft.p50}ms\` | Chunker=\`${latencySummary.chunker.p50}ms\` | TTS=\`${latencySummary.tts.p50}ms\` | Dispatch=\`${latencySummary.dispatch.p50}ms\`\n` +
-      `- **Resilience / Timeout**: STT=\`${config.TIMEOUT_STT_MS}ms\` | LLM=\`${config.TIMEOUT_LLM_MS}ms\` | TTS=\`${config.TIMEOUT_TTS_MS}ms\` | Retry=\`${config.MAX_RETRIES}\`\n` +
-      `- **Auto-Reconnect Suara**: \`${totalReconnects}\` kali berhasil\n` +
-      `- **Channel Chat AI**: \`${config.CHAT_CHANNEL_NAMES.join(', ')}\`\n` +
-      `- **Chat Cooldown**: \`${config.CHAT_COOLDOWN_MS}ms\` (Limit: \`${config.RATE_LIMIT_PER_MIN}/mnt\`)\n` +
-      `- **Allowlist Guild**: ${allowlistManager.getGuildAllowlistCount() === 0 ? 'Semua (Bebas)' : `${allowlistManager.getGuildAllowlistCount()} terdaftar`}\n` +
-      `- **Allowlist User**: ${allowlistManager.getUserAllowlistCount() === 0 ? 'Semua (Bebas)' : `${allowlistManager.getUserAllowlistCount()} terdaftar`}\n` +
-      `- **Bot Owner ID**: \`${allowlistManager.getOwnerUserId() || 'Belum diatur'}\`\n` +
-      `- **Batas Biaya / Anggaran (FR-A1, FR-A3)**: Status=\`${budgetStats.level.toUpperCase()}\` | Req=\`${budgetStats.dailyRequests}/${budgetStats.maxRequests}\` (${budgetStats.requestPercentage}%) | Token=\`${budgetStats.dailyTokens}/${budgetStats.maxTokens}\` (${budgetStats.tokenPercentage}%)\n` +
-      `- **Kill Switch**: \`${config.BOT_ENABLED ? 'Aktif' : 'Muted'}\``,
+    embeds: [embed],
     ephemeral: true,
     allowedMentions: { parse: [] },
   });
@@ -2472,10 +2402,10 @@ async function handlePersonaCommand(interaction: ChatInputCommandInteraction) {
       const result = await personaManager.reload();
       await interaction.reply({
         content:
-          `✨ **Persona Berhasil Dimuat Ulang!** (FR-P1)\n` +
+          `✨ **Persona Lyraa Berhasil Dimuat Ulang!** 🌸\n` +
           `• Versi Aktif: \`${result.version}\`\n` +
-          `• Few-Shot Examples: \`${result.exampleCount} contoh\`\n` +
-          `• Lexicon Dictionary: \`${result.lexiconCount} entri fonetik\`\n` +
+          `• Few-Shot Examples: \`${result.exampleCount} contoh percakapan\`\n` +
+          `• Kamus Fonetik: \`${result.lexiconCount} entri fonetik\`\n` +
           `• Waktu Reload: <t:${Math.floor(result.loadedAt.getTime() / 1000)}:R>`,
         ephemeral: true,
         allowedMentions: { parse: [] },
@@ -2488,13 +2418,21 @@ async function handlePersonaCommand(interaction: ChatInputCommandInteraction) {
       });
     }
   } else if (subcommand === 'info') {
+    const embed = new EmbedBuilder()
+      .setColor(0xff77a9)
+      .setTitle('🎭 Karakter & Persona Lyraa ✨')
+      .setDescription(
+        `• **Nama**: **Lyraa (Lyra)**\n` +
+        `• **Peran**: Anak manis kesayangan Papap (<@640513136503291934>) & teman nongkrong di Discord!\n` +
+        `• **Versi Persona**: \`${personaManager.getVersion()}\`\n` +
+        `• **Few-Shot Examples**: \`${personaManager.getExamples().length} contoh dialog\`\n` +
+        `• **Kamus Fonetik**: \`${Object.keys(personaManager.getLexicon()).length} kata terdaftar\`\n` +
+        `• **Ciri Khas Bicara**: Kalimat pembuka lisan ≤ 8 kata, tag emosi di awal, celetukan centil to-the-point tanpa markdown berbelit!`
+      )
+      .setFooter({ text: 'Lyraa • Anak Manis & Teman Nongkrong Voice Discord 💖' });
+
     await interaction.reply({
-      content:
-        `🎭 **Informasi Persona & Gaya Bicara**\n` +
-        `• Versi Aktif: \`${personaManager.getVersion()}\`\n` +
-        `• Few-Shot Examples: \`${personaManager.getExamples().length} contoh\`\n` +
-        `• Lexicon Entri: \`${Object.keys(personaManager.getLexicon()).length} kata\`\n` +
-        `• Aturan Suara: Kalimat pembuka ≤ 8 kata, tag emosi di awal, tanpa markdown/emoji.`,
+      embeds: [embed],
       ephemeral: true,
       allowedMentions: { parse: [] },
     });

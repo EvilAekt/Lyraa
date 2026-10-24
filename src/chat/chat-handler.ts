@@ -4,7 +4,7 @@ import { validateImageAttachment, ImageProcessor } from './image-handler.js';
 import { getLlmProvider } from '../providers/index.js';
 import { withTimeout, withRetry, getRandomFallbackPhrase } from '../audio/resilience.js';
 import { config } from '../config/index.js';
-import { PersonaManager, getPersonaManager } from '../persona/index.js';
+import { PersonaManager, getPersonaManager, moodEngine } from '../persona/index.js';
 import {
   MemoryStore,
   getMemoryStore,
@@ -206,10 +206,20 @@ export class ChatHandler {
     const effectiveMaxTokens = this.budgetManager.getAllowedMaxOutputTokens(this.maxOutputTokens);
 
     try {
-      const activeSystemPrompt = this.personaManager.isReady()
-        ? this.personaManager.buildSystemInstruction('text')
-        : this.systemPrompt;
       const promptText = gateResult.cleanedPrompt || message.content || '';
+
+      // Process and update dynamic mood based on incoming text
+      moodEngine.processUtterance(promptText, message.author.id);
+
+      const isCreator = message.author.id === (config.OWNER_USER_ID || '640513136503291934');
+      const relationshipHint = isCreator
+        ? `\n[HUBUNGAN LAWAN BICARA]: Kamu sedang berbicara langsung dengan Papap/Pencipta kamu sendiri (Discord ID: 640513136503291934). Bicaralah seperti anak perempuan manis yang manja, sayang, penurut tapi suka usil centil!`
+        : `\n[HUBUNGAN LAWAN BICARA]: Teman nongkrong di server Discord. Bersikaplah ramah, asik, seru, dan centil!`;
+
+      const moodHint = `\n${moodEngine.getPromptInstruction()}`;
+      const effectiveSystemPrompt = (this.personaManager.isReady()
+        ? this.personaManager.buildSystemInstruction('text')
+        : this.systemPrompt) + relationshipHint + moodHint;
 
       // Build safe multi-turn context and passive user facts (PRD §9, FR-P2, FR-P3, SEC-5)
       const promptMessages = this.contextBuilder.buildPromptPayload({
@@ -217,7 +227,7 @@ export class ChatHandler {
         userId: message.author.id,
         userName: message.author.displayName || message.author.username,
         currentPrompt: promptText,
-        systemInstruction: activeSystemPrompt,
+        systemInstruction: effectiveSystemPrompt,
         maxRecentTurns: 12,
       });
 

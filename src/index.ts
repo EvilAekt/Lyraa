@@ -57,7 +57,7 @@ import {
   EMPTY_ALLOWED_MENTIONS,
   sanitizeMentions,
 } from './chat/index.js';
-import { PersonaManager, getPersonaManager } from './persona/index.js';
+import { PersonaManager, getPersonaManager, moodEngine, MoodType } from './persona/index.js';
 import {
   MemoryStore,
   getMemoryStore,
@@ -283,6 +283,33 @@ const commands = [
         .setName('info')
         .setDescription('Lihat informasi versi persona dan kamus fonetik aktif')
     ),
+  new SlashCommandBuilder()
+    .setName('mood')
+    .setDescription('Cek atau ubah suasana hati (mood) Lyra')
+    .addSubcommand((sub) =>
+      sub.setName('status').setDescription('Lihat suasana hati dan perasaan Lyra sekarang')
+    )
+    .addSubcommand((sub) =>
+      sub.setName('bujuk').setDescription('Bujuk atau semangati Lyra jika lagi bad mood atau ngantuk')
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('set')
+        .setDescription('Papap only: Atur suasana hati Lyra secara manual')
+        .addStringOption((opt) =>
+          opt
+            .setName('mood')
+            .setDescription('Pilih suasana hati')
+            .setRequired(true)
+            .addChoices(
+              { name: '😄 Happy / Ceria', value: 'happy' },
+              { name: '😜 Playful / Centil & Usil', value: 'playful' },
+              { name: '😾 Bad Mood / Ngambek Lucu', value: 'bad_mood' },
+              { name: '🥱 Sleepy / Ngantuk & Mager', value: 'sleepy' },
+              { name: '☕ Chill / Santai', value: 'chill' }
+            )
+        )
+    ),
 ].map((cmd) => cmd.toJSON());
 
 client.once(Events.ClientReady, async (readyClient) => {
@@ -422,6 +449,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await handleForgetCommand(interaction);
   } else if (commandName === 'persona') {
     await handlePersonaCommand(interaction);
+  } else if (commandName === 'mood') {
+    await handleMoodCommand(interaction);
   }
 });
 
@@ -519,6 +548,10 @@ client.on(Events.MessageCreate, async (message) => {
     return;
   } else if (lower === '!forget all') {
     await handlePrefixForgetAll(message);
+    return;
+  } else if (lower.startsWith('!mood')) {
+    const moodArg = content.slice(5).trim();
+    await handlePrefixMood(message, moodArg);
     return;
   }
 
@@ -804,24 +837,124 @@ function applyVoicePreset(presetKey: string): { name: string; samplePhrase: stri
   }
 }
 
-const JOIN_GREETINGS = [
-  'Hai hai semuanya~! Lyra udah join nih, ada yang kangen gak yaa?',
-  'Ciee pada nungguin aku ya? Halo halo, Lyra di sini~!',
-  'Yuhuu~! Lyra datang membawa keceriaan! Lagi pada ngobrolin apa nih?',
-  'Haloo teman-teman! Lyra siap nemenin kalian ngobrol dan seru-seruan bareng!',
-  'Ehehe, ada Lyra di sini! Jangan kaget ya kalau aku cerewet dikit~',
-];
+const PRESET_GREETINGS: Record<
+  string,
+  { default: string[]; bad_mood?: string[]; sleepy?: string[] }
+> = {
+  chibi: {
+    default: [
+      'Hai hai semuanya~! Lyra yang paling imut dan centil udah join nih, kangen kan?!',
+      'Yuhuu~! Cewek tercentil se-server udah mendarat di voice, siap seru-seruan!',
+      'Halo halo! Lyra versi chibi imut siap nemenin kalian nongkrong seharian, hehe~',
+    ],
+    bad_mood: [
+      'Hmph! Lagi agak kesel nih, tapi disuruh join yaudah deh... jangan ganggu ya!',
+      'Dih, pada manggil-manggil mulu! Lagi bad mood tau, tapi yaudah Lyra temenin bentar.',
+    ],
+    sleepy: [
+      'Hoamm... Lyra chibi masih ngantuk tau, tapi pengen nemenin kalian di sini...',
+      'Ngantuk banget deh... tapi gapapa, Lyra merem sambil dengerin kalian ya...',
+    ],
+  },
+  tsundere: {
+    default: [
+      'Hmph! Siapa juga yang kangen kalian? Kebetulan lewat aja ya, jangan geer dulu!',
+      'Dih, sepi banget! Karena aku lagi baik hati, aku temenin bentar deh. Jangan geer ya!',
+      'I-iya iya aku join! Bukan berarti aku seneng ketemu kalian lho ya!',
+    ],
+    bad_mood: [
+      'Dih, ngapain sih manggil-manggil? Lagi males tau! Cepetan mau ngomong apa?!',
+      'Hmph! Jangan ajak aku ngomong dulu, lagi kesel pokoknya!',
+    ],
+  },
+  cute: {
+    default: [
+      'Halo halo semuanya~ Lyra dateng bawa senyuman paling manis buat kalian! Hehe~',
+      'Konnichiwa semuanya~! Seneng banget bisa nongkrong bareng kalian lagi hari ini!',
+    ],
+    bad_mood: [
+      'Halo teman-teman... Maaf ya, Lyra lagi agak gak mood senyum hari ini...',
+    ],
+  },
+  sweet: {
+    default: [
+      'Halo semuanya... Semoga harimu menyenangkan ya. Lyra temenin di sini biar gak sepi...',
+      'Hai teman-teman... Santai bareng Lyra yuk di voice channel ini...',
+    ],
+    bad_mood: [
+      'Halo semuanya... Maaf ya kalau Lyra lagi agak pendiam hari ini...',
+    ],
+  },
+  hyper: {
+    default: [
+      'YUHUUU GAESS! Party time! Lyra hadir bawa energi seribu persen, ayo mabar sekarang!',
+      'HALO SEMUANYA!! Suara terheboh se-Discord udah datang, jangan kasih kendor ya guys!',
+    ],
+    bad_mood: [
+      'Arrgh lagi kesel!! Tapi bodo amat deh, ayo kita bikin heboh voice channel ini sekarang!!',
+    ],
+  },
+  energetic: {
+    default: [
+      'Ayo gas mabar sekarang juga! Jangan kasih kendor ya guys, Lyra udah siap di voice nih!',
+      'Halo guys! Siap push rank bareng Lyra hari ini? Ayo gaskeun!',
+    ],
+  },
+  cozy: {
+    default: [
+      'Halo semuanya... Santai dulu ya, rileks bareng obrolan adem Lyra di sini...',
+      'Malam teman-teman... Rileks sejenak ya bareng Lyra...',
+    ],
+  },
+  standard: {
+    default: [
+      'Halo teman-teman, Lyra udah join voice channel nih. Siap ngobrol santai bareng kalian!',
+    ],
+  },
+};
+
+export function getJoinGreeting(guildId: string, connection: VoiceConnection): string {
+  const creatorId = config.OWNER_USER_ID || '640513136503291934';
+  const voiceChannelId = connection.joinConfig.channelId;
+
+  if (guildId && voiceChannelId) {
+    const guild = client.guilds.cache.get(guildId);
+    const channel = guild?.channels.cache.get(voiceChannelId);
+    if (channel && channel.isVoiceBased() && channel.members.has(creatorId)) {
+      const creatorGreetings = [
+        'Ehh ada Papap di sini! Hai Papap kesayangan Lyra, Lyra temenin yaa~',
+        'Papap! Lyra dateng nih, kangen deh nongkrong bareng Papap!',
+        'Halo Papap tercinta! Liat nih Lyra udah siap nemenin Papap ngobrol!',
+      ];
+      return creatorGreetings[Math.floor(Math.random() * creatorGreetings.length)];
+    }
+  }
+
+  const mood = moodEngine.getMood();
+  const presetConfig = PRESET_GREETINGS[currentActivePresetKey] || PRESET_GREETINGS.chibi;
+
+  let pool = presetConfig.default;
+  if (mood === 'bad_mood' && presetConfig.bad_mood?.length) {
+    pool = presetConfig.bad_mood;
+  } else if (mood === 'sleepy' && presetConfig.sleepy?.length) {
+    pool = presetConfig.sleepy;
+  }
+
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 async function playJoinGreeting(guildId: string, connection: VoiceConnection, textChannel?: any) {
   try {
     await entersState(connection, VoiceConnectionStatus.Ready, 5_000);
     await new Promise((r) => setTimeout(r, 600));
 
-    const greetingText = JOIN_GREETINGS[Math.floor(Math.random() * JOIN_GREETINGS.length)];
+    const greetingText = getJoinGreeting(guildId, connection);
     const tts = getTtsProvider();
     const player = getOrCreateVoicePlayer(guildId, connection);
 
-    console.log(`[VoiceJoin] Playing spoken greeting: "${greetingText}" via ${tts.getVoiceName()}`);
+    console.log(
+      `[VoiceJoin] Playing spoken greeting (${currentActivePresetKey}/${moodEngine.getMood()}): "${greetingText}" via ${tts.getVoiceName()}`
+    );
     const cleanText = personaManager.cleanForTts(greetingText);
     const audio = await tts.synthesize(cleanText || greetingText);
 
@@ -1462,6 +1595,101 @@ async function handlePrefixVoice(message: Message, arg: string) {
   }
 }
 
+async function handleMoodCommand(interaction: ChatInputCommandInteraction) {
+  const sub = interaction.options.getSubcommand();
+  const details = moodEngine.getMoodDetails();
+
+  if (sub === 'bujuk') {
+    const wasBad = details.mood === 'bad_mood';
+    moodEngine.setMood('happy', `Dibujuk dan disemangatin sama ${interaction.user.displayName || interaction.user.username}!`);
+    await interaction.reply({
+      content: wasBad
+        ? `💖 **Lyra luluh!**\n> *"Ihh makasih udah ngebujuk aku yaa... Yaudah deh, aku gak ngambek lagi, hehe!"*\n(Mood sekarang: 😄 **Happy / Ceria**)`
+        : `✨ **Lyra makin senang!**\n> *"Ehehe makasih yaa! Jadi makin semangat nih nemenin kalian!"*\n(Mood sekarang: 😄 **Happy / Ceria**)`,
+      allowedMentions: { parse: [] },
+    });
+    return;
+  }
+
+  if (sub === 'set') {
+    const isOwner = interaction.user.id === (config.OWNER_USER_ID || '640513136503291934');
+    if (!isOwner) {
+      await interaction.reply({
+        content: '❌ Hanya Papap/Owner yang bisa mengatur mood Lyra secara manual ya!',
+        ephemeral: true,
+        allowedMentions: { parse: [] },
+      });
+      return;
+    }
+
+    const newMood = interaction.options.getString('mood', true) as MoodType;
+    moodEngine.setMood(newMood, 'Diatur langsung oleh Papap tercinta!');
+    const updated = moodEngine.getMoodDetails();
+    await interaction.reply({
+      content: `🎭 **Mood Lyra Berhasil Diubah oleh Papap!**\n${updated.emoji} **${updated.name}**\n_${updated.description}_`,
+      allowedMentions: { parse: [] },
+    });
+    return;
+  }
+
+  // /mood status
+  await interaction.reply({
+    content:
+      `💖 **Status Suasana Hati Lyra Saat Ini**:\n` +
+      `${details.emoji} **${details.name}**\n` +
+      `• Kondisi: _"${details.description}"_\n` +
+      `• Cerita Hati: _"${details.reason}"_\n\n` +
+      `_Tip: Kalau Lyra lagi bad mood atau ngantuk, kamu bisa ketik \`/mood bujuk\` atau puji dia biar mood-nya happy lagi!_`,
+    allowedMentions: { parse: [] },
+  });
+}
+
+async function handlePrefixMood(message: Message, arg: string) {
+  const trimmed = arg.toLowerCase().trim();
+
+  if (trimmed === 'bujuk' || trimmed === 'semangat') {
+    const wasBad = moodEngine.getMood() === 'bad_mood';
+    moodEngine.setMood('happy', `Dibujuk dan disemangatin sama ${message.author.displayName || message.author.username}!`);
+    await message.reply({
+      content: wasBad
+        ? `💖 **Lyra luluh!**\n> *"Ihh makasih udah ngebujuk aku yaa... Yaudah deh, aku gak ngambek lagi, hehe!"*\n(Mood sekarang: 😄 **Happy / Ceria**)`
+        : `✨ **Lyra makin senang!**\n> *"Ehehe makasih yaa! Jadi makin semangat nih nemenin kalian!"*\n(Mood sekarang: 😄 **Happy / Ceria**)`,
+      allowedMentions: { parse: [] },
+    });
+    return;
+  }
+
+  const validMoods = ['happy', 'playful', 'bad_mood', 'bad', 'sleepy', 'chill'];
+  if (validMoods.includes(trimmed)) {
+    const isOwner = message.author.id === (config.OWNER_USER_ID || '640513136503291934');
+    if (!isOwner) {
+      await message.reply({
+        content: '❌ Hanya Papap/Owner yang bisa mengatur mood Lyra secara langsung ya!',
+        allowedMentions: { parse: [] },
+      });
+      return;
+    }
+    const targetMood: MoodType = trimmed === 'bad' ? 'bad_mood' : (trimmed as MoodType);
+    moodEngine.setMood(targetMood, 'Diatur langsung oleh Papap tercinta!');
+    const updated = moodEngine.getMoodDetails();
+    await message.reply({
+      content: `🎭 **Mood Lyra Berhasil Diubah oleh Papap!**\n${updated.emoji} **${updated.name}**\n_${updated.description}_`,
+      allowedMentions: { parse: [] },
+    });
+    return;
+  }
+
+  const details = moodEngine.getMoodDetails();
+  await message.reply({
+    content:
+      `💖 **Status Suasana Hati Lyra Saat Ini**:\n` +
+      `${details.emoji} **${details.name}**\n` +
+      `• Kondisi: _"${details.description}"_\n` +
+      `• Cerita Hati: _"${details.reason}"_\n\n` +
+      `_Ketik \`!mood bujuk\` kalau Lyra lagi bad mood atau ngantuk ya!_`,
+    allowedMentions: { parse: [] },
+  });
+}
 
 async function handleChatCommand(interaction: ChatInputCommandInteraction) {
   const userInput = interaction.options.getString('pesan', true);
@@ -1732,6 +1960,14 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
         const sttLatency = t1 - t0;
         console.log(`[VoiceLoop] [t0->t1: ${sttLatency}ms] ${member?.displayName || userId}: "${sttResult.text}"`);
 
+        // Process and update dynamic mood based on incoming speech
+        const moodShift = moodEngine.processUtterance(sttResult.text, userId);
+        if (moodShift.shifted) {
+          console.log(
+            `[VoiceLoop] Mood shifted from ${moodShift.oldMood} to ${moodShift.newMood} by ${member?.displayName || userId}`
+          );
+        }
+
         // Mode & Wake Word Gating (PRD FR-V5, TC-07)
         const gateResult = interactionGate.evaluate(sttResult.text, { userId });
         if (!gateResult.allowed) {
@@ -1801,10 +2037,16 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
         const userMemories = memoryStore.getUserMemories(userId);
         const factsBlock = contextBuilder.formatUserFacts(userMemories);
 
+        const isCreator = userId === (config.OWNER_USER_ID || '640513136503291934');
+        const relationshipHint = isCreator
+          ? `\n[HUBUNGAN LAWAN BICARA]: Kamu sedang berbicara langsung dengan Papap/Pencipta kamu sendiri (Discord ID: 640513136503291934). Bicaralah seperti anak perempuan manis yang manja, sayang, penurut tapi suka usil centil!`
+          : `\n[HUBUNGAN LAWAN BICARA]: Teman nongkrong di server Discord. Bersikaplah ramah, asik, seru, dan centil!`;
+
+        const moodHint = `\n${moodEngine.getPromptInstruction()}`;
         const toneHint = currentActiveTonePrompt ? `\n[NADA BICARA AKTIF]: ${currentActiveTonePrompt}` : '';
         const baseVoicePrompt = (personaManager.isReady()
           ? personaManager.buildSystemInstruction('voice')
-          : 'Kamu adalah Lyra, AI VTuber centil, imut, dan cerdik. SANGAT PENTING: Berikan celetukan SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.') + toneHint;
+          : 'Kamu adalah Lyra, anak perempuan centil, imut, dan cerdik teman nongkrong di Discord. SANGAT PENTING: Berikan celetukan SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.') + relationshipHint + moodHint + toneHint;
 
         // Multi-Turn Context Buffer: Ambil 15 riwayat percakapan terakhir di Voice Channel agar paham konteks obrolan
         const voiceChannelKey = textChannel?.id || connection.joinConfig.channelId || 'voice';

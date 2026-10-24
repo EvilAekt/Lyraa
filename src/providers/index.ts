@@ -1,6 +1,8 @@
 import { config } from '../config/index.js';
 import { LlmProvider } from './llm-provider.js';
 import { GeminiLlmProvider } from './gemini/gemini-llm.js';
+import { OpenAiCompatibleLlmProvider } from './openai-compatible-llm.js';
+import { WaterfallCandidate, WaterfallLlmProvider } from './waterfall-llm.js';
 import { SttProvider } from './stt-provider.js';
 import { GeminiSttProvider } from './gemini/gemini-stt.js';
 import { TtsProvider } from './tts-provider.js';
@@ -10,6 +12,8 @@ import { ElevenLabsTtsProvider } from './elevenlabs/elevenlabs-tts.js';
 
 export * from './llm-provider.js';
 export * from './gemini/gemini-llm.js';
+export * from './openai-compatible-llm.js';
+export * from './waterfall-llm.js';
 export * from './stt-provider.js';
 export * from './gemini/gemini-stt.js';
 export * from './tts-provider.js';
@@ -23,6 +27,47 @@ let defaultLlmProvider: LlmProvider | null = null;
 let defaultSttProvider: SttProvider | null = null;
 let defaultTtsProvider: TtsProvider | null = null;
 
+export function createWaterfallLlmProvider(): WaterfallLlmProvider {
+  const candidates: WaterfallCandidate[] = [
+    {
+      name: 'Gemini',
+      provider: new GeminiLlmProvider({
+        apiKey: config.GEMINI_API_KEY,
+        model: config.LLM_MODEL,
+      }),
+      isConfigured: () => Boolean(config.GEMINI_API_KEY && config.GEMINI_API_KEY.trim().length > 0),
+    },
+    {
+      name: 'Groq',
+      provider: new OpenAiCompatibleLlmProvider({
+        name: 'Groq',
+        apiKey: config.GROQ_API_KEY,
+        baseUrl: config.GROQ_BASE_URL,
+        model: config.GROQ_MODEL,
+        timeoutMs: config.TIMEOUT_LLM_MS,
+      }),
+      isConfigured: () => Boolean(config.GROQ_API_KEY && config.GROQ_API_KEY.trim().length > 0),
+    },
+    {
+      name: 'OpenRouter',
+      provider: new OpenAiCompatibleLlmProvider({
+        name: 'OpenRouter',
+        apiKey: config.OPENROUTER_API_KEY,
+        baseUrl: config.OPENROUTER_BASE_URL,
+        model: config.OPENROUTER_MODEL,
+        timeoutMs: config.TIMEOUT_LLM_MS,
+        extraHeaders: {
+          'HTTP-Referer': 'https://github.com/EvilAekt/Lyraa',
+          'X-Title': 'Lyraa VTuber Bot',
+        },
+      }),
+      isConfigured: () => Boolean(config.OPENROUTER_API_KEY && config.OPENROUTER_API_KEY.trim().length > 0),
+    },
+  ];
+
+  return new WaterfallLlmProvider(candidates);
+}
+
 export function getLlmProvider(): LlmProvider {
   if (defaultLlmProvider) {
     return defaultLlmProvider;
@@ -31,15 +76,50 @@ export function getLlmProvider(): LlmProvider {
   const providerType = config.LLM_PROVIDER.toLowerCase();
 
   switch (providerType) {
+    case 'waterfall':
+      defaultLlmProvider = createWaterfallLlmProvider();
+      return defaultLlmProvider;
+
     case 'gemini':
-      defaultLlmProvider = new GeminiLlmProvider({
-        apiKey: config.GEMINI_API_KEY,
-        model: config.LLM_MODEL,
+      // If backup keys exist, wrap with Waterfall (Gemini primary) for resilient failover
+      if (config.GROQ_API_KEY || config.OPENROUTER_API_KEY) {
+        defaultLlmProvider = createWaterfallLlmProvider();
+      } else {
+        defaultLlmProvider = new GeminiLlmProvider({
+          apiKey: config.GEMINI_API_KEY,
+          model: config.LLM_MODEL,
+        });
+      }
+      return defaultLlmProvider;
+
+    case 'groq':
+      defaultLlmProvider = new OpenAiCompatibleLlmProvider({
+        name: 'Groq',
+        apiKey: config.GROQ_API_KEY,
+        baseUrl: config.GROQ_BASE_URL,
+        model: config.GROQ_MODEL,
+        timeoutMs: config.TIMEOUT_LLM_MS,
+      });
+      return defaultLlmProvider;
+
+    case 'openrouter':
+      defaultLlmProvider = new OpenAiCompatibleLlmProvider({
+        name: 'OpenRouter',
+        apiKey: config.OPENROUTER_API_KEY,
+        baseUrl: config.OPENROUTER_BASE_URL,
+        model: config.OPENROUTER_MODEL,
+        timeoutMs: config.TIMEOUT_LLM_MS,
+        extraHeaders: {
+          'HTTP-Referer': 'https://github.com/EvilAekt/Lyraa',
+          'X-Title': 'Lyraa VTuber Bot',
+        },
       });
       return defaultLlmProvider;
 
     default:
-      throw new Error(`[Providers] Unsupported LLM provider: "${providerType}". Supported: "gemini".`);
+      throw new Error(
+        `[Providers] Unsupported LLM provider: "${providerType}". Supported: "waterfall", "gemini", "groq", "openrouter".`
+      );
   }
 }
 

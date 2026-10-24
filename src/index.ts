@@ -37,6 +37,7 @@ import {
   VoicevoxTtsProvider,
   ElevenLabsTtsProvider,
   VOICEVOX_SPEAKER_MAP,
+  ChatMessage,
 } from './providers/index.js';
 import { createOpusDecoder } from './audio/opus-decoder.js';
 import { VoicePlayer } from './audio/voice-player.js';
@@ -1535,7 +1536,38 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
 
         const baseVoicePrompt = personaManager.isReady()
           ? personaManager.buildSystemInstruction('voice')
-          : 'Kamu adalah Lyra, AI VTuber cerdas, ramah, dan ekspresif. SANGAT PENTING: Berikan jawaban SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.';
+          : 'Kamu adalah Lyra, AI VTuber centil, imut, dan cerdik. SANGAT PENTING: Berikan celetukan SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.';
+
+        // Multi-Turn Context Buffer: Ambil riwayat percakapan terakhir di Voice Channel agar paham konteks
+        const voiceChannelKey = textChannel?.id || connection.joinConfig.channelId || 'voice';
+        const recentTurns = memoryStore.getRecentTurns(voiceChannelKey, 6);
+
+        const voiceMessages: ChatMessage[] = [
+          {
+            role: 'system',
+            text: baseVoicePrompt + factsBlock,
+          },
+        ];
+
+        // Masukkan riwayat multi-turn ke dalam konteks LLM
+        for (const turn of recentTurns) {
+          const speakerName = turn.userName || 'Teman';
+          voiceMessages.push({
+            role: 'user',
+            text: wrapUntrustedData(`[${speakerName}]: ${turn.userInput}`, 'VOICE_HISTORY'),
+          });
+          voiceMessages.push({
+            role: 'model',
+            text: turn.botReply,
+          });
+        }
+
+        // Kalimat pengguna saat ini dengan label nama pembicara
+        const currentSpeaker = member?.displayName || 'Teman';
+        voiceMessages.push({
+          role: 'user',
+          text: wrapUntrustedData(`[${currentSpeaker}]: ${gateResult.cleanedText}`, 'VOICE_UTTERANCE'),
+        });
 
         // Budget & Cost check for Voice (FR-A3, SEC-6, TC-16)
         let fullAiReply = '';
@@ -1556,26 +1588,14 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
             yield exhaustedPhrase;
           })();
         } else {
-          tokenStream = llmProvider.generateStream(
-            [
-              {
-                role: 'system',
-                text: baseVoicePrompt + factsBlock,
-              },
-              {
-                role: 'user',
-                text: wrapUntrustedData(gateResult.cleanedText, 'VOICE_UTTERANCE'),
-              },
-            ],
-            {
-              maxOutputTokens: voiceMaxTokens,
-              temperature: 0.7,
-              onFirstToken: (ttft) => {
-                t2 = Date.now();
-                ttftMs = ttft;
-              },
-            }
-          );
+          tokenStream = llmProvider.generateStream(voiceMessages, {
+            maxOutputTokens: voiceMaxTokens,
+            temperature: 0.7,
+            onFirstToken: (ttft) => {
+              t2 = Date.now();
+              ttftMs = ttft;
+            },
+          });
         }
 
         try {

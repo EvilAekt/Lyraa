@@ -11,8 +11,19 @@ const envSchema = z.object({
   ADMIN_WEBHOOK_URL: z.string().optional().default(''),
 
   GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
-  LLM_PROVIDER: z.string().default('gemini'),
+  LLM_PROVIDER: z.string().default('waterfall'),
   LLM_MODEL: z.string().default('gemini-3.5-flash-lite'),
+
+  // Groq API Configuration (Fast fallback)
+  GROQ_API_KEY: z.string().optional().default(''),
+  GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
+  GROQ_BASE_URL: z.string().default('https://api.groq.com/openai/v1'),
+
+  // OpenRouter Configuration (Free tier backup)
+  OPENROUTER_API_KEY: z.string().optional().default(''),
+  OPENROUTER_MODEL: z.string().default('meta-llama/llama-3.3-70b-instruct:free'),
+  OPENROUTER_BASE_URL: z.string().default('https://openrouter.ai/api/v1'),
+
   STT_PROVIDER: z.string().default('gemini'),
   STT_MODEL: z.string().default('gemini-3.5-flash-lite'),
   TTS_PROVIDER: z.string().default('gemini'),

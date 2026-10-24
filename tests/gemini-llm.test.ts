@@ -1,11 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getLlmProvider } from '../src/providers/index.js';
+import { GeminiLlmProvider, getLlmProvider } from '../src/providers/index.js';
 import { config } from '../src/config/index.js';
 
 test('GeminiLlmProvider: initializes from config without hardcoded model', () => {
+  const gemini = new GeminiLlmProvider({
+    apiKey: config.GEMINI_API_KEY,
+    model: config.LLM_MODEL,
+  });
+  assert.equal(gemini.getModelName(), config.LLM_MODEL);
+
   const provider = getLlmProvider();
-  assert.equal(provider.getModelName(), config.LLM_MODEL);
+  assert.ok(
+    provider.getModelName().includes(config.LLM_MODEL),
+    `Provider model string should contain ${config.LLM_MODEL}`
+  );
 });
 
 test('GeminiLlmProvider: streams tokens and triggers TTFT callback', async (t) => {

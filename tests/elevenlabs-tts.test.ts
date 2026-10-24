@@ -81,16 +81,21 @@ test('ElevenLabsTtsProvider (Integration): synthesize() successfully calls Eleve
   });
 
   const start = Date.now();
-  const audio = await provider.synthesize('Halo! Ini uji coba suara ElevenLabs untuk VTuber AI.');
+  const audio = await provider.synthesize('Halo! Ini uji coba suara ElevenLabs untuk Lyraa.');
   const duration = Date.now() - start;
 
-  assert.ok(audio.length > 5000, `Synthesized audio buffer (${audio.length} bytes) must be substantial`);
-  assert.equal(audio.length % 4, 0, 'Audio buffer must be aligned to 4-byte 16-bit stereo PCM frames');
+  assert.ok(audio.length > 1000, `Synthesized audio buffer (${audio.length} bytes) must be substantial`);
+  if (provider.getStreamType() === 'ogg/opus') {
+    assert.equal(audio.subarray(0, 4).toString('utf8'), 'OggS', 'Audio buffer must be valid OggOpus container');
+    assert.equal(VoicePlayer.detectStreamType(audio), StreamType.OggOpus);
+  } else {
+    assert.equal(audio.length % 4, 0, 'Audio buffer must be aligned to 4-byte 16-bit stereo PCM frames');
+  }
 
-  console.log(`\n  [ElevenLabs Live Result] Synthesized ${audio.length} bytes stereo PCM in ${duration}ms`);
+  console.log(`\n  [ElevenLabs Live Result] Synthesized ${audio.length} bytes (${provider.getStreamType()}) in ${duration}ms`);
 });
 
-test('ElevenLabsTtsProvider (Integration): synthesized PCM audio plays in VoicePlayer (StreamType.Raw)', async () => {
+test('ElevenLabsTtsProvider (Integration): synthesized audio plays in VoicePlayer', async () => {
   if (!config.ELEVENLABS_API_KEY) {
     return;
   }
@@ -102,16 +107,16 @@ test('ElevenLabsTtsProvider (Integration): synthesized PCM audio plays in VoiceP
     outputFormat: config.ELEVENLABS_OUTPUT_FORMAT,
   });
 
-  const audio = await provider.synthesize('Siap!');
-  assert.ok(audio.length > 1000);
+  const audio = await provider.synthesize('Siap Papa!');
+  assert.ok(audio.length > 500);
 
   const player = new VoicePlayer();
-  await player.enqueue(audio, StreamType.Raw);
+  await player.enqueue(audio);
   assert.equal(player.getPlaybackStats().totalItemsPlayed, 1);
   player.destroy();
 });
 
-test('ElevenLabsTtsProvider (Integration): synthesizeStream() streams progressive PCM chunks', async () => {
+test('ElevenLabsTtsProvider (Integration): synthesizeStream() streams progressive audio chunks', async () => {
   if (!config.ELEVENLABS_API_KEY) {
     return;
   }
@@ -130,11 +135,13 @@ test('ElevenLabsTtsProvider (Integration): synthesizeStream() streams progressiv
   for await (const chunk of stream) {
     chunkCount++;
     totalBytes += chunk.length;
-    assert.equal(chunk.length % 4, 0, 'Each streaming chunk must align to 4-byte stereo frames');
+    if (provider.getStreamType() === 'raw') {
+      assert.equal(chunk.length % 4, 0, 'Each streaming chunk must align to 4-byte stereo frames');
+    }
   }
 
   assert.ok(chunkCount >= 1, 'Stream must deliver at least 1 audio chunk');
-  assert.ok(totalBytes > 1000, 'Total streamed bytes must be substantial');
+  assert.ok(totalBytes > 500, 'Total streamed bytes must be substantial');
   console.log(`\n  [ElevenLabs Stream Result] Streamed ${chunkCount} chunks, total ${totalBytes} bytes`);
 });
 
@@ -174,8 +181,12 @@ test('ElevenLabsTtsProvider: seamlessly switches between Voice 1 and Voice 2', a
       const start = Date.now();
       const audio = await provider.synthesize('Hai, ini suara keduaku!');
       const dur = Date.now() - start;
-      assert.ok(audio.length > 5000);
-      assert.equal(audio.length % 4, 0);
+      assert.ok(audio.length > 500);
+      if (provider.getStreamType() === 'ogg/opus') {
+        assert.equal(audio.subarray(0, 4).toString('utf8'), 'OggS');
+      } else {
+        assert.equal(audio.length % 4, 0);
+      }
       console.log(`\n  [ElevenLabs Voice 2 Live Result] Synthesized ${audio.length} bytes in ${dur}ms with Voice 2 (N9pacNE5zbJ3p2Zw6iuD)`);
     } catch (err: any) {
       if (err.message.includes('paid_plan_required') || err.message.includes('402')) {

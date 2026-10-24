@@ -169,7 +169,7 @@ export class ImageProcessor {
 
     const basePrompt =
       customSystemInstruction ||
-      'Kamu adalah Lyra, AI VTuber cerdas, ramah, ekspresif, dan ceria. Berikan komentar santai, seru, dan jelas dalam Bahasa Indonesia.';
+      'Kamu adalah Lyra, anak perempuan manis kesayangan Papa, cerdik, centil, dan teman nongkrong di Discord. Berikan komentar santai, seru, dan asik dalam Bahasa Indonesia.';
     const systemInstruction = basePrompt + sec5Rules;
 
     const userContent = promptText

@@ -39,7 +39,7 @@ export class ElevenLabsTtsProvider implements TtsProvider {
     this.apiKey = cfg.apiKey;
     this.voiceId = cfg.voiceId || '0CzBBZVHSe1kKQOUHVzq';
     this.modelId = cfg.modelId || 'eleven_turbo_v2_5';
-    this.outputFormat = cfg.outputFormat || 'pcm_48000';
+    this.outputFormat = cfg.outputFormat || 'opus_48000_64';
     this.stability = cfg.stability ?? 0.35;
     this.similarityBoost = cfg.similarityBoost ?? 0.75;
     this.style = cfg.style ?? 0.65;
@@ -52,7 +52,13 @@ export class ElevenLabsTtsProvider implements TtsProvider {
   }
 
   public getStreamType(): string {
-    return 'raw';
+    if (this.outputFormat.startsWith('opus_')) {
+      return 'ogg/opus';
+    }
+    if (this.outputFormat.startsWith('pcm_')) {
+      return 'raw';
+    }
+    return 'ogg/opus';
   }
 
   public getVoiceId(): string {
@@ -224,26 +230,31 @@ export class ElevenLabsTtsProvider implements TtsProvider {
         return;
       }
 
-      let leftover: Buffer | null = null;
-
-      // Read chunked web stream
-      for await (const rawChunk of response.body as any) {
-        let chunkBuffer = Buffer.from(rawChunk);
-
-        if (leftover && leftover.length > 0) {
-          chunkBuffer = Buffer.concat([leftover, chunkBuffer]);
-          leftover = null;
+      if (this.outputFormat.startsWith('opus_')) {
+        for await (const rawChunk of response.body as any) {
+          yield Buffer.from(rawChunk);
         }
+      } else {
+        let leftover: Buffer | null = null;
+        // Read chunked web stream for PCM
+        for await (const rawChunk of response.body as any) {
+          let chunkBuffer = Buffer.from(rawChunk);
 
-        // Must align to 16-bit (2-byte) samples
-        if (chunkBuffer.length % 2 !== 0) {
-          leftover = chunkBuffer.subarray(chunkBuffer.length - 1);
-          chunkBuffer = chunkBuffer.subarray(0, chunkBuffer.length - 1);
-        }
+          if (leftover && leftover.length > 0) {
+            chunkBuffer = Buffer.concat([leftover, chunkBuffer]);
+            leftover = null;
+          }
 
-        if (chunkBuffer.length > 0) {
-          const stereoChunk = ElevenLabsTtsProvider.monoToStereoPcm(chunkBuffer);
-          yield stereoChunk;
+          // Must align to 16-bit (2-byte) samples
+          if (chunkBuffer.length % 2 !== 0) {
+            leftover = chunkBuffer.subarray(chunkBuffer.length - 1);
+            chunkBuffer = chunkBuffer.subarray(0, chunkBuffer.length - 1);
+          }
+
+          if (chunkBuffer.length > 0) {
+            const stereoChunk = ElevenLabsTtsProvider.monoToStereoPcm(chunkBuffer);
+            yield stereoChunk;
+          }
         }
       }
     } catch (err: any) {
@@ -293,7 +304,12 @@ export class ElevenLabsTtsProvider implements TtsProvider {
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const monoPcm = Buffer.from(arrayBuffer);
-    return ElevenLabsTtsProvider.monoToStereoPcm(monoPcm);
+    const rawBuffer = Buffer.from(arrayBuffer);
+
+    if (this.outputFormat.startsWith('opus_')) {
+      return rawBuffer;
+    }
+
+    return ElevenLabsTtsProvider.monoToStereoPcm(rawBuffer);
   }
 }

@@ -77,12 +77,37 @@ export class VoicePlayer {
       },
     });
 
+    let autoPausedTimer: NodeJS.Timeout | null = null;
+
     this.player.on('stateChange', (oldState, newState) => {
       if (newState.status === AudioPlayerStatus.Idle && oldState.status !== AudioPlayerStatus.Idle) {
+        if (autoPausedTimer) {
+          clearTimeout(autoPausedTimer);
+          autoPausedTimer = null;
+        }
         if (this.currentPlayResolve) {
           const resolve = this.currentPlayResolve;
           this.currentPlayResolve = null;
           resolve();
+        }
+      } else if (newState.status === AudioPlayerStatus.AutoPaused) {
+        // Handle AutoPaused state: attempt unpause immediately to recover playback
+        this.player.unpause();
+        if (!autoPausedTimer) {
+          autoPausedTimer = setTimeout(() => {
+            autoPausedTimer = null;
+            if (this.player.state.status === AudioPlayerStatus.AutoPaused && this.currentPlayResolve) {
+              console.warn('[VoicePlayer] Player remained in AutoPaused. Resolving lock to prevent audio deadlock.');
+              const resolve = this.currentPlayResolve;
+              this.currentPlayResolve = null;
+              resolve();
+            }
+          }, 1500);
+        }
+      } else {
+        if (autoPausedTimer) {
+          clearTimeout(autoPausedTimer);
+          autoPausedTimer = null;
         }
       }
     });
@@ -212,6 +237,24 @@ export class VoicePlayer {
   }
 
   /**
+   * Automatically detects audio stream format from buffer magic bytes.
+   * - 0x4F, 0x67, 0x67, 0x53 ('OggS') -> StreamType.OggOpus
+   * - 0x1A, 0x45, 0xDF, 0xA3 (EBML)   -> StreamType.WebmOpus
+   * - Fallback to provided hintType or StreamType.Raw
+   */
+  public static detectStreamType(buffer: Buffer, hintType?: StreamType): StreamType {
+    if (buffer && buffer.length >= 4) {
+      if (buffer[0] === 0x4f && buffer[1] === 0x67 && buffer[2] === 0x67 && buffer[3] === 0x53) {
+        return StreamType.OggOpus;
+      }
+      if (buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) {
+        return StreamType.WebmOpus;
+      }
+    }
+    return hintType ?? StreamType.Raw;
+  }
+
+  /**
    * Enqueues an audio buffer to be played sequentially.
    */
   public async enqueue(
@@ -272,10 +315,11 @@ export class VoicePlayer {
       }
 
       try {
+        const detectedType = VoicePlayer.detectStreamType(item.buffer, item.inputType);
         const stream = Readable.from(item.buffer);
-        const useInlineVolume = this.inlineVolume && item.inputType === StreamType.Raw;
+        const useInlineVolume = this.inlineVolume && detectedType === StreamType.Raw;
         const resource = createAudioResource(stream, {
-          inputType: item.inputType,
+          inputType: detectedType,
           inlineVolume: useInlineVolume,
         });
 
@@ -284,8 +328,40 @@ export class VoicePlayer {
           resource.volume.setVolume(this.volume);
         }
 
+        // Calculate dynamic safety timeout based on buffer length
+        let maxPlayMs = 12000;
+        if (detectedType === StreamType.Raw) {
+          maxPlayMs = Math.max(6000, Math.min(25000, Math.ceil((item.buffer.length / 192000) * 1000) + 4000));
+        }
+
         await new Promise<void>((resolve) => {
-          this.currentPlayResolve = resolve;
+          let hasFinished = false;
+          let playTimeoutTimer: NodeJS.Timeout | null = null;
+
+          const finishPlay = () => {
+            if (!hasFinished) {
+              hasFinished = true;
+              if (playTimeoutTimer) {
+                clearTimeout(playTimeoutTimer);
+                playTimeoutTimer = null;
+              }
+              this.currentPlayResolve = null;
+              resolve();
+            }
+          };
+
+          this.currentPlayResolve = finishPlay;
+
+          resource.playStream.once('error', (streamErr) => {
+            console.warn(`[VoicePlayer] Resource playStream error: ${streamErr.message}`);
+            finishPlay();
+          });
+
+          playTimeoutTimer = setTimeout(() => {
+            console.warn(`[VoicePlayer] Safety timeout reached (${maxPlayMs}ms). Releasing playback lock.`);
+            finishPlay();
+          }, maxPlayMs);
+
           this.player.play(resource);
         });
 

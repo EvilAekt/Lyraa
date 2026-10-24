@@ -174,7 +174,7 @@ export class LatencyHarness {
           [
             {
               role: 'system',
-              text: 'Kamu adalah Lyra, AI VTuber cerdas dan ramah. Berikan jawaban santai, ringkas, dan jelas dalam Bahasa Indonesia (1-2 kalimat untuk percakapan suara).',
+              text: 'Kamu adalah Lyra, anak perempuan manis kesayangan Papa, cerdik, dan centil. Berikan jawaban santai, ringkas, dan jelas dalam Bahasa Indonesia (1-2 kalimat untuk percakapan suara).',
             },
             {
               role: 'user',

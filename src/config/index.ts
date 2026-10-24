@@ -43,7 +43,7 @@ const envSchema = z.object({
   ELEVENLABS_VOICE_ID: z.string().default('0CzBBZVHSe1kKQOUHVzq'),
   ELEVENLABS_VOICE_ID_2: z.string().default('N9pacNE5zbJ3p2Zw6iuD'),
   ELEVENLABS_MODEL_ID: z.string().default('eleven_turbo_v2_5'),
-  ELEVENLABS_OUTPUT_FORMAT: z.string().default('pcm_48000'),
+  ELEVENLABS_OUTPUT_FORMAT: z.string().default('opus_48000_64'),
 
   INTERACTION_MODE: z.enum(['wake', 'ptt', 'open']).default('wake'),
   WAKE_WORDS: z.string().transform((val) => val.split(',').map((w) => w.trim()).filter(Boolean)).default('Lyra,Lira,Airi,Bot,Halo'),

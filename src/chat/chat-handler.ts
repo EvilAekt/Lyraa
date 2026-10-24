@@ -57,7 +57,7 @@ export class ChatHandler {
       });
     this.systemPrompt =
       options.systemPrompt ??
-      'Kamu adalah Lyra, AI VTuber cerdas, ramah, ekspresif, dan ceria. Berikan jawaban yang natural, santai, dan jelas dalam Bahasa Indonesia.';
+      'Kamu adalah Lyra, anak perempuan manis kesayangan Papa, cerdik, centil, dan teman nongkrong di Discord. Berikan jawaban yang natural, santai, ekspresif, dan asik dalam Bahasa Indonesia.';
     this.maxOutputTokens = options.maxOutputTokens ?? 300;
     this.temperature = options.temperature ?? 0.7;
   }

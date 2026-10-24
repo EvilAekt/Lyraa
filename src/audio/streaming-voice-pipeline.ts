@@ -100,7 +100,13 @@ export class StreamingVoicePipeline {
               if (item.index === 0 && !t4FirstTtsAudioReadyTime) {
                 t4FirstTtsAudioReadyTime = Date.now();
               }
-              const inputType = this.ttsProvider.getStreamType() === 'raw' ? StreamType.Raw : StreamType.WebmOpus;
+              const streamTypeStr = this.ttsProvider.getStreamType();
+              let inputType = StreamType.WebmOpus;
+              if (streamTypeStr === 'ogg/opus') {
+                inputType = StreamType.OggOpus;
+              } else if (streamTypeStr === 'raw') {
+                inputType = StreamType.Raw;
+              }
               await this.voicePlayer.enqueue(item.buffer, inputType);
               audioChunksEnqueued++;
               options.callbacks?.onAudioEnqueued?.(item.index);

@@ -707,7 +707,7 @@ const VOICE_PRESETS: Record<string, { name: string; pitch: number; speed: number
     name: '🌸 Kawaii Anime',
     pitch: 20,
     speed: 1.15,
-    samplePhrase: 'Halo semuanya! Kenalin, aku Lyra, AI VTuber kamu yang paling imut dan ceria! Hehe.',
+    samplePhrase: 'Halo semuanya! Kenalin, aku Lyraa, anak manis kesayangan Papa yang paling imut dan ceria! Hehe.',
   },
   tsundere: {
     name: '💅 Tsundere / Judes Manja',
@@ -740,10 +740,10 @@ const VOICE_PRESETS: Record<string, { name: string; pitch: number; speed: number
     samplePhrase: 'Malam semuanya... Kalau capek, istirahat dulu ya sambil dengerin obrolan santai Lyra.',
   },
   standard: {
-    name: '🤖 Standar Datar',
+    name: '🤖 Standar Santun',
     pitch: 0,
     speed: 1.00,
-    samplePhrase: 'Halo, saya Lyra, asisten virtual dalam mode suara standar.',
+    samplePhrase: 'Halo semuanya, aku Lyraa, siap nemenin kamu nongkrong santai di voice channel.',
   },
 };
 
@@ -756,56 +756,64 @@ const ELEVENLABS_PRESETS: Record<
     similarityBoost: 0.75,
     style: 0.65,
     speed: 1.15,
-    promptHint: 'Gunakan celetukan centil, imut, lincah, ekspresif, dan tawa manis khas chibi anime!',
+    promptHint:
+      'Kamu adalah Lyraa, anak perempuan manis, cerdik, dan centil kesayangan Papa (Discord ID: 640513136503291934). Gunakan celetukan centil, imut, lincah, ekspresif, dan tawa manis khas anak perempuan. Selalu manja dan hormat ke Papa, serta ramah asik ke teman nongkrong!',
   },
   tsundere: {
     stability: 0.30,
     similarityBoost: 0.80,
     style: 0.70,
     speed: 1.10,
-    promptHint: 'Gunakan celetukan judes manja, gengsian tapi sebenarnya peduli (Ihh... siapa juga yang nungguin kamu? B-bukan berarti aku senang ya!)',
+    promptHint:
+      'Gunakan nada tsundere manja khas anak gadis ke Papa (Ihh Papa apaan sih! Papa gak peka banget deh! B-bukan berarti Lyra butuh Papa ya!). Tetap panggil Papa jika bicara ke Papa, dan judes lucu menggemaskan ke teman tongkrongan!',
   },
   cute: {
     stability: 0.40,
     similarityBoost: 0.80,
     style: 0.60,
     speed: 1.05,
-    promptHint: 'Gunakan nada bicara manis, imut ala anime idol, hangat dan ceria!',
+    promptHint:
+      'Gunakan nada bicara manis, imut, hangat dan ceria ala anak perempuan periang yang bikin Papa bangga dan teman nongkrong betah ngobrol!',
   },
   sweet: {
     stability: 0.50,
     similarityBoost: 0.85,
     style: 0.45,
     speed: 0.95,
-    promptHint: 'Gunakan nada lembut, santun, penuh perhatian dan kasih sayang mendalam.',
+    promptHint:
+      'Gunakan nada lembut, santun, penuh perhatian dan kasih sayang mendalam khas anak kesayangan yang selalu peduli sama Papa dan teman-teman!',
   },
   hyper: {
     stability: 0.25,
     similarityBoost: 0.70,
     style: 0.80,
     speed: 1.20,
-    promptHint: 'Gunakan celetukan super ceria, heboh, antusias tinggi, dan sangat bersemangat!',
+    promptHint:
+      'Gunakan celetukan super ceria, heboh, antusias tinggi, dan sangat bersemangat mengajak Papa dan teman-teman seru-seruan bareng!',
   },
   energetic: {
     stability: 0.35,
     similarityBoost: 0.75,
     style: 0.65,
     speed: 1.10,
-    promptHint: 'Gunakan gaya streamer energik yang mengajak mabar dan seru-seruan bareng!',
+    promptHint:
+      'Gunakan gaya ceria dan energik yang mengajak Papa dan teman-teman mabar game dan seru-seruan bareng di voice channel!',
   },
   cozy: {
     stability: 0.60,
     similarityBoost: 0.85,
     style: 0.35,
     speed: 0.90,
-    promptHint: 'Gunakan nada santai, berbisik tenang, dan menyejukkan hati.',
+    promptHint:
+      'Gunakan nada santai, hangat menyejukkan hati, menemani Papa yang sedang lelah beristirahat atau teman-teman ngobrol tenang.',
   },
   standard: {
     stability: 0.50,
     similarityBoost: 0.75,
     style: 0.0,
     speed: 1.00,
-    promptHint: 'Gunakan gaya santun dan ramah standar.',
+    promptHint:
+      'Gunakan gaya santun, ramah, dan manis khas Lyraa anak kesayangan Papa.',
   },
 };
 
@@ -959,8 +967,9 @@ async function playJoinGreeting(guildId: string, connection: VoiceConnection, te
     const cleanText = personaManager.cleanForTts(greetingText);
     const audio = await tts.synthesize(cleanText || greetingText);
 
-    // Explicitly use WebmOpus for Edge-TTS and Raw for ElevenLabs
-    const streamType = tts.getStreamType?.() === 'raw' ? StreamType.Raw : StreamType.WebmOpus;
+    // Auto-detect format via VoicePlayer or StreamType
+    const streamTypeStr = tts.getStreamType?.();
+    const streamType = streamTypeStr === 'raw' ? StreamType.Raw : (streamTypeStr === 'ogg/opus' ? StreamType.OggOpus : StreamType.WebmOpus);
     await player.play(audio, streamType);
 
     if (textChannel && 'send' in textChannel) {
@@ -1105,8 +1114,7 @@ async function handleVoiceButtonInteraction(interaction: ButtonInteraction) {
             const player = getOrCreateVoicePlayer(interaction.guildId, connection);
             const tts = getTtsProvider();
             const audio = await tts.synthesize(presetResult.samplePhrase);
-            const streamType = tts.getStreamType?.() === 'raw' ? StreamType.Raw : StreamType.Arbitrary;
-            await player.play(audio, streamType);
+            await player.play(audio);
           } catch (e: any) {
             console.warn(`[Bot-AI] Failed to play preset preview: ${e.message}`);
           }
@@ -1168,10 +1176,10 @@ async function handleVoiceButtonInteraction(interaction: ButtonInteraction) {
           try {
             const player = getOrCreateVoicePlayer(interaction.guildId, connection);
             const previewText = isVoice1
-              ? 'Halo! Ini suara pertamaku.'
-              : 'Hai hai! Ini suara keduaku, imut kan?';
+              ? 'Halo Papa dan semuanya! Kenalin, ini suara lembutnya Lyraa, manis kan? Hehe~'
+              : 'Hai hai Papa! Ini Lyraa dengan suara keduaku yang imut dan ceria, siap nemenin Papa nongkrong!';
             const audio = await elevenLabs.synthesize(previewText);
-            await player.play(audio, StreamType.Raw);
+            await player.play(audio);
           } catch (err: any) {
             console.warn(`[Bot-AI] Failed to play voice switch preview: ${err.message}`);
           }
@@ -1240,10 +1248,10 @@ async function handleVoiceCommand(interaction: ChatInputCommandInteraction) {
             try {
               const player = getOrCreateVoicePlayer(interaction.guildId, connection);
               const sampleText = targetVoiceId === config.ELEVENLABS_VOICE_ID_2
-                ? 'Hai hai! Ini suara keduaku, manis kan?'
-                : 'Halo semuanya! Kenalin, aku Lyra!';
+                ? 'Hai hai Papa! Ini Lyraa dengan suara keduaku yang manis dan ceria!'
+                : 'Halo Papa dan semuanya! Kenalin, ini suara lembutnya Lyraa, manis kan? Hehe~';
               const audio = await elevenLabs.synthesize(sampleText);
-              await player.play(audio, StreamType.Raw);
+              await player.play(audio);
             } catch (err: any) {
               console.warn(`[Bot-AI] Failed to play ElevenLabs preview: ${err.message}`);
             }
@@ -1620,9 +1628,16 @@ async function handleChatCommand(interaction: ChatInputCommandInteraction) {
     let ttftMs = 0;
     let fullReply = '';
 
-    const systemInstruction = personaManager.isReady()
+    const isCreator = interaction.user.id === (config.OWNER_USER_ID || '640513136503291934');
+    const relationshipHint = isCreator
+      ? '\n[ATURAN PANGGILAN KHUSUS - PAPA / PENCIPTA]: Lawan bicaramu adalah PAPA tercinta yang menciptakan Lyra (Discord ID: 640513136503291934). Kamu WAJIB selalu memanggilnya "Papa" atau "Ayah", bersikap manja, sayang, hormat, dan gemas!'
+      : '\n[HUBUNGAN]: Teman nongkrong asik di Discord. Bersikaplah ramah, ceria, dan centil!';
+
+    const basePrompt = personaManager.isReady()
       ? personaManager.buildSystemInstruction('text')
-      : 'Kamu adalah Lyra, AI VTuber cerdas, ramah, dan ekspresif. Berikan jawaban yang natural, ringkas, dan jelas dalam Bahasa Indonesia.';
+      : 'Kamu adalah Lyra, anak perempuan manis kesayangan Papa, cerdik, centil, dan teman nongkrong di Discord. Berikan jawaban natural, ekspresif, santai, dan jelas dalam Bahasa Indonesia.';
+
+    const systemInstruction = basePrompt + relationshipHint;
 
     const stream = provider.generateStream(
       [
@@ -1708,9 +1723,16 @@ async function handlePrefixChat(message: Message, prompt: string) {
     let ttftMs = 0;
     let fullReply = '';
 
-    const systemInstruction = personaManager.isReady()
+    const isCreator = message.author.id === (config.OWNER_USER_ID || '640513136503291934');
+    const relationshipHint = isCreator
+      ? '\n[ATURAN PANGGILAN KHUSUS - PAPA / PENCIPTA]: Lawan bicaramu adalah PAPA tercinta yang menciptakan Lyra (Discord ID: 640513136503291934). Kamu WAJIB selalu memanggilnya "Papa" atau "Ayah", bersikap manja, sayang, hormat, dan gemas!'
+      : '\n[HUBUNGAN]: Teman nongkrong asik di Discord. Bersikaplah ramah, ceria, dan centil!';
+
+    const basePrompt = personaManager.isReady()
       ? personaManager.buildSystemInstruction('text')
-      : 'Kamu adalah Lyra, AI VTuber cerdas, ramah, dan ekspresif. Berikan jawaban yang natural, ringkas, dan jelas dalam Bahasa Indonesia.';
+      : 'Kamu adalah Lyra, anak perempuan manis kesayangan Papa, cerdik, centil, dan teman nongkrong di Discord. Berikan jawaban natural, ekspresif, santai, dan jelas dalam Bahasa Indonesia.';
+
+    const systemInstruction = basePrompt + relationshipHint;
 
     const stream = provider.generateStream(
       [

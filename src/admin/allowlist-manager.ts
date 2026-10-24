@@ -102,12 +102,11 @@ export class AllowlistManager {
    */
   public formatPrivacyNotice(channelName: string, botName = 'Lyraa'): string {
     return (
-      `🌸 **Hai hai semuanya! ${botName} udah join ke #${channelName}~** ✨\n\n` +
-      `Siap nemenin kalian ngobrol, mabar, dan seru-seruan bareng! Biar obrolan kita asik, ini catatan kecil dari Lyraa ya:\n` +
-      `• 🎙️ **Mendengarkan Percakapan**: Lyraa dengerin suara kalian di voice channel ini biar bisa langsung nyeletuk dan jawab obrolan kalian.\n` +
-      `• 🔒 **Privasi & Keamanan**: Audio suara diproses real-time dengan enkripsi E2EE dan **tidak disimpan**. Jangan sebar password atau data rahasia yaa!\n` +
-      `• 🧹 **Sesi Bersih**: Kalau Lyraa pamit (\`/leave\`), riwayat obrolan sesi langsung di-reset bersih!\n` +
-      `• 💖 **Kontrol Suara**: Mau ganti gaya bicara atau nada bicaraku? Ketik \`/voice panel\` aja ya!\n\n` +
+      `🌸 **Hai hai semuanya! ${botName} telah bergabung ke #${channelName}~** ✨ (SEC-9)\n\n` +
+      `Siap nemenin kalian ngobrol, mabar, dan seru-seruan bareng!\n` +
+      `• 🎙️ **Mendengarkan & Transkripsi**: Aku mendengarkan suara di channel ini dengan protokol enkripsi DAVE E2EE dan model Google Gemini AI agar bisa membalas percakapan secara natural.\n` +
+      `• 🔒 **Privasi Data**: Audio mentah tidak disimpan ke disk. Transkrip disimpan maksimal 7 hari dan dapat dihapus dengan perintah \`/forget me\`. Dilarang membocorkan data rahasia pribadi (nomor rekening, password, PIN).\n` +
+      `• 💖 **Kontrol Penuh**: Gunakan perintah \`/leave\` untuk meminta bot keluar, \`/mute\` untuk membisukan respons AI, atau \`/voice panel\` untuk mengubah gaya suara!\n\n` +
       `_Ayo seru-seruan bareng Lyraa sekarang juga~!_ 🎀`
     );
   }

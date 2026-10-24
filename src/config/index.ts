@@ -16,7 +16,7 @@ const envSchema = z.object({
 
   // Groq API Configuration (Fast fallback)
   GROQ_API_KEY: z.string().optional().default(''),
-  GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
+  GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
   GROQ_BASE_URL: z.string().default('https://api.groq.com/openai/v1'),
 
   // OpenRouter Configuration (Free tier backup)

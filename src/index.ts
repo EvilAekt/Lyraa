@@ -208,7 +208,10 @@ const commands = [
         )
     )
     .addSubcommand((sub) =>
-      sub.setName('panel').setDescription('Buka panel tombol interaktif untuk beralih Suara 1 atau Suara 2 ElevenLabs')
+      sub.setName('panel').setDescription('Buka panel tombol kontrol suara (ElevenLabs & Edge-TTS)')
+    )
+    .addSubcommand((sub) =>
+      sub.setName('tune').setDescription('Buka panel tombol tuning nada centil & imut Lyra')
     )
     .addSubcommand((sub) =>
       sub.setName('list').setDescription('Lihat daftar karakter suara dan status aktif')
@@ -219,18 +222,21 @@ const commands = [
     .addSubcommand((sub) =>
       sub
         .setName('preset')
-        .setDescription('Pilih preset gaya nada suara Edge-TTS (cute, chibi, energetic, cozy, standard)')
+        .setDescription('Pilih preset gaya nada suara Edge-TTS')
         .addStringOption((opt) =>
           opt
             .setName('preset')
             .setDescription('Pilih gaya suara yang diinginkan')
             .setRequired(true)
             .addChoices(
-              { name: '🌸 Imut / Kawaii Anime (Pitch +20, Speed 1.15)', value: 'cute' },
-              { name: '🐣 Chibi / Super Cute (Pitch +26, Speed 1.18)', value: 'chibi' },
-              { name: '⚡ Ceria / Energetic Streamer (Pitch +12, Speed 1.10)', value: 'energetic' },
-              { name: '🌙 Cozy / Santai Lembut (Pitch -2, Speed 0.95)', value: 'cozy' },
-              { name: '🤖 Standar Bot Datar (Pitch 0, Speed 1.00)', value: 'standard' }
+              { name: '🐣 Chibi Imut & Centil (Pitch +26, Speed 1.18)', value: 'chibi' },
+              { name: '💅 Tsundere Judes Manja (Pitch +18, Speed 1.14)', value: 'tsundere' },
+              { name: '🌸 Kawaii Anime (Pitch +20, Speed 1.15)', value: 'cute' },
+              { name: '🍬 Sweet Lembut Manis (Pitch +14, Speed 1.08)', value: 'sweet' },
+              { name: '⚡ Hyper Super Ceria (Pitch +32, Speed 1.25)', value: 'hyper' },
+              { name: '🔥 Energetic Streamer (Pitch +12, Speed 1.10)', value: 'energetic' },
+              { name: '🌙 Cozy Santai Lembut (Pitch -2, Speed 0.95)', value: 'cozy' },
+              { name: '🤖 Standar Datar (Pitch 0, Speed 1.00)', value: 'standard' }
             )
         )
     ),
@@ -660,20 +666,38 @@ async function handlePrefixMode(message: Message, modeArg: string) {
 }
 
 const VOICE_PRESETS: Record<string, { name: string; pitch: number; speed: number; samplePhrase: string }> = {
-  cute: {
-    name: '🌸 Imut / Kawaii Anime',
-    pitch: 20,
-    speed: 1.15,
-    samplePhrase: 'Halo semuanya! Kenalin, aku Lyra, AI VTuber kamu yang paling imut dan ceria! Hehe.',
-  },
   chibi: {
-    name: '🐣 Chibi / Super Cute',
+    name: '🐣 Chibi Imut & Centil (Default)',
     pitch: 26,
     speed: 1.18,
     samplePhrase: 'Wah seru banget! Aku Lyra versi chibi imut, siap nemenin kamu seharian!',
   },
+  cute: {
+    name: '🌸 Kawaii Anime',
+    pitch: 20,
+    speed: 1.15,
+    samplePhrase: 'Halo semuanya! Kenalin, aku Lyra, AI VTuber kamu yang paling imut dan ceria! Hehe.',
+  },
+  tsundere: {
+    name: '💅 Tsundere / Judes Manja',
+    pitch: 18,
+    speed: 1.14,
+    samplePhrase: 'Ihh! Siapa juga yang nungguin kamu? Tapi... ya udah deh, ngobrol bentar aja ya!',
+  },
+  sweet: {
+    name: '🍬 Sweet / Lembut Manis',
+    pitch: 14,
+    speed: 1.08,
+    samplePhrase: 'Halo... Semoga harimu menyenangkan ya. Kalau capek, istirahat dulu bareng Lyra.',
+  },
+  hyper: {
+    name: '⚡ Hyper / Super Ceria',
+    pitch: 32,
+    speed: 1.25,
+    samplePhrase: 'Yuhuu! Semangat banget hari ini! Ayo kita seru-seruan bareng sekarang juga!',
+  },
   energetic: {
-    name: '⚡ Ceria / Energetic Streamer',
+    name: '🔥 Energetic Streamer',
     pitch: 12,
     speed: 1.10,
     samplePhrase: 'Ayo gas mabar sekarang juga, jangan kasih kendor ya guys!',
@@ -692,6 +716,8 @@ const VOICE_PRESETS: Record<string, { name: string; pitch: number; speed: number
   },
 };
 
+let currentActivePresetKey: string = 'chibi';
+
 function createVoiceSwitchButtons(activeVoiceId?: string) {
   const tts = getTtsProvider();
   const currentVoiceId = activeVoiceId || (tts instanceof ElevenLabsTtsProvider ? tts.getVoiceId() : config.ELEVENLABS_VOICE_ID);
@@ -699,31 +725,66 @@ function createVoiceSwitchButtons(activeVoiceId?: string) {
 
   const isVoice1 = isElevenLabs && currentVoiceId === config.ELEVENLABS_VOICE_ID;
   const isVoice2 = isElevenLabs && currentVoiceId === config.ELEVENLABS_VOICE_ID_2;
+  const isEdgeActive = !isElevenLabs;
 
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+  // Row 1: Edge-TTS Cute/Centil Presets
+  const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId('btn_preset_chibi')
+      .setLabel('🐣 Chibi')
+      .setStyle(isEdgeActive && currentActivePresetKey === 'chibi' ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('btn_preset_tsundere')
+      .setLabel('💅 Tsundere')
+      .setStyle(isEdgeActive && currentActivePresetKey === 'tsundere' ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('btn_preset_cute')
+      .setLabel('🌸 Kawaii')
+      .setStyle(isEdgeActive && currentActivePresetKey === 'cute' ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('btn_preset_sweet')
+      .setLabel('🍬 Sweet')
+      .setStyle(isEdgeActive && currentActivePresetKey === 'sweet' ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('btn_preset_hyper')
+      .setLabel('⚡ Hyper')
+      .setStyle(isEdgeActive && currentActivePresetKey === 'hyper' ? ButtonStyle.Success : ButtonStyle.Secondary)
+  );
+
+  // Row 2: ElevenLabs & Mode Switch
+  const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('btn_voice_1')
-      .setLabel('🎙️ Suara 1 (Lyra Soft)')
-      .setStyle(isVoice1 ? ButtonStyle.Success : ButtonStyle.Primary)
-      .setDisabled(isVoice1),
+      .setLabel('🎙️ ElevenLabs 1 (Soft)')
+      .setStyle(isVoice1 ? ButtonStyle.Success : ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('btn_voice_2')
-      .setLabel('🎙️ Suara 2 (Lyra Sweet)')
-      .setStyle(isVoice2 ? ButtonStyle.Success : ButtonStyle.Primary)
-      .setDisabled(isVoice2)
+      .setLabel('🎙️ ElevenLabs 2 (Sweet)')
+      .setStyle(isVoice2 ? ButtonStyle.Success : ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('btn_voice_edge')
+      .setLabel('🇮🇩 Mode Edge-TTS')
+      .setStyle(isEdgeActive ? ButtonStyle.Success : ButtonStyle.Secondary)
   );
+
+  let currentDescription = '';
+  if (isElevenLabs) {
+    currentDescription = `• **Provider Aktif**: \`ElevenLabs Studio Quality\`\n• **Karakter**: **${isVoice2 ? 'Suara 2 (Lyra Sweet)' : 'Suara 1 (Lyra Soft)'}**\n• **Voice ID**: \`${currentVoiceId}\``;
+  } else {
+    const activePreset = VOICE_PRESETS[currentActivePresetKey] || VOICE_PRESETS.chibi;
+    currentDescription = `• **Provider Aktif**: \`Edge-TTS (Indonesia)\`\n• **Preset Nada**: **${activePreset.name}**\n• **Tuning**: Pitch \`+${activePreset.pitch}Hz\`, Speed \`${activePreset.speed}x\``;
+  }
 
   const embed = new EmbedBuilder()
     .setColor(0xff69b4)
-    .setTitle('🎛️ Panel Pemilihan Suara (ElevenLabs)')
+    .setTitle('🎛️ Pusat Kendali Suara & Nada Lyra')
     .setDescription(
-      `Pilih salah satu karakter suara di bawah ini untuk berganti secara instan:\n\n` +
-      `• **Suara 1 (Lyra Soft)**: \`${config.ELEVENLABS_VOICE_ID}\` ${isVoice1 ? '⭐ *(Sedang Aktif)*' : ''}\n` +
-      `• **Suara 2 (Lyra Sweet)**: \`${config.ELEVENLABS_VOICE_ID_2}\` ${isVoice2 ? '⭐ *(Sedang Aktif)*' : ''}\n\n` +
-      `_Klik salah satu tombol untuk beralih suara langsung di Voice Channel!_`
+      `Pilih gaya bicara atau suara di bawah ini untuk mengubah karakter suara Lyra secara instan:\n\n` +
+      `${currentDescription}\n\n` +
+      `_Klik salah satu tombol preset nada (Row 1) atau suara ElevenLabs (Row 2)!_`
     );
 
-  return { embeds: [embed], components: [row] };
+  return { embeds: [embed], components: [row1, row2] };
 }
 
 async function handleVoiceButtonInteraction(interaction: ButtonInteraction) {
@@ -747,6 +808,68 @@ async function handleVoiceButtonInteraction(interaction: ButtonInteraction) {
     return;
   }
 
+  // Handle Edge-TTS Presets
+  if (interaction.customId.startsWith('btn_preset_')) {
+    const presetKey = interaction.customId.replace('btn_preset_', '');
+    const preset = VOICE_PRESETS[presetKey] || VOICE_PRESETS.chibi;
+    currentActivePresetKey = presetKey;
+
+    try {
+      activateEdgeProvider({ speed: preset.speed, pitch: preset.pitch });
+      phraseAudioCache.clear();
+
+      const panel = createVoiceSwitchButtons();
+      await interaction.update({
+        embeds: panel.embeds,
+        components: panel.components,
+      });
+
+      await interaction.followUp({
+        content: `🎭 Gaya suara Lyra berhasil diubah ke **${preset.name}** (Pitch: \`+${preset.pitch}Hz\`, Speed: \`${preset.speed}x\`)!`,
+        ephemeral: true,
+        allowedMentions: { parse: [] },
+      });
+
+      if (interaction.guildId) {
+        const connection = getVoiceConnection(interaction.guildId);
+        if (connection) {
+          try {
+            const player = getOrCreateVoicePlayer(interaction.guildId, connection);
+            const tts = getTtsProvider();
+            const audio = await tts.synthesize(preset.samplePhrase);
+            await player.play(audio);
+          } catch (e: any) {
+            console.warn(`[Bot-AI] Failed to play preset preview: ${e.message}`);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('[Bot-AI] Failed to switch preset via button:', err);
+    }
+    return;
+  }
+
+  // Handle Switch to Edge-TTS
+  if (interaction.customId === 'btn_voice_edge') {
+    const preset = VOICE_PRESETS[currentActivePresetKey] || VOICE_PRESETS.chibi;
+    activateEdgeProvider({ speed: preset.speed, pitch: preset.pitch });
+    phraseAudioCache.clear();
+
+    const panel = createVoiceSwitchButtons();
+    await interaction.update({
+      embeds: panel.embeds,
+      components: panel.components,
+    });
+
+    await interaction.followUp({
+      content: `🇮🇩 Suara bot dikembalikan ke **Edge-TTS Indonesia** (${preset.name})!`,
+      ephemeral: true,
+      allowedMentions: { parse: [] },
+    });
+    return;
+  }
+
+  // Handle ElevenLabs Voice 1 & 2
   if (interaction.customId === 'btn_voice_1' || interaction.customId === 'btn_voice_2') {
     const isVoice1 = interaction.customId === 'btn_voice_1';
     const targetVoiceId = isVoice1 ? config.ELEVENLABS_VOICE_ID : config.ELEVENLABS_VOICE_ID_2;
@@ -800,8 +923,8 @@ async function handleVoiceButtonInteraction(interaction: ButtonInteraction) {
 async function handleVoiceCommand(interaction: ChatInputCommandInteraction) {
   const subcommand = interaction.options.getSubcommand(false);
 
-  // 0. /voice panel
-  if (subcommand === 'panel') {
+  // 0. /voice panel or /voice tune
+  if (subcommand === 'panel' || subcommand === 'tune') {
     const tts = getTtsProvider();
     const activeVoiceId = tts instanceof ElevenLabsTtsProvider ? tts.getVoiceId() : config.ELEVENLABS_VOICE_ID;
     const panel = createVoiceSwitchButtons(activeVoiceId);
@@ -1494,6 +1617,29 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
           console.log(
             `[VoiceLoop] [Gate: ${interactionGate.getMode()}] Ignored utterance from ${member?.displayName || userId}: "${sttResult.text}" (Alasan: ${gateResult.reason})`
           );
+
+          // Room Awareness: Catat obrolan pasif antar user ke memori ruangan jika minimal 3 kata
+          const passiveWords = sttResult.text.trim().split(/\s+/).filter(Boolean);
+          if (passiveWords.length >= 3) {
+            const voiceChannelKey = textChannel?.id || connection.joinConfig.channelId || 'voice';
+            const speakerName = member?.displayName || 'Teman';
+            try {
+              memoryStore.recordTurn({
+                sessionId: `voice-${connection.joinConfig.guildId}`,
+                channelId: voiceChannelKey,
+                userId,
+                userName: speakerName,
+                userInput: sttResult.text,
+                botReply: '', // Obrolan pasif antar pengguna di ruangan
+                turnLatencyMs: 0,
+              });
+
+              // Auto-Remember dari obrolan pasif
+              factExtractor.processTurnAndSave(userId, sttResult.text, 'voice-passive');
+            } catch (err: any) {
+              // Ignore background recording errors
+            }
+          }
           return;
         }
 
@@ -1538,9 +1684,9 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
           ? personaManager.buildSystemInstruction('voice')
           : 'Kamu adalah Lyra, AI VTuber centil, imut, dan cerdik. SANGAT PENTING: Berikan celetukan SANGAT SINGKAT (maksimal 1-2 kalimat pendek, 15-20 kata total). DILARANG MONOLOG PANJANG. Kembalikan giliran bicara ke pengguna.';
 
-        // Multi-Turn Context Buffer: Ambil riwayat percakapan terakhir di Voice Channel agar paham konteks
+        // Multi-Turn Context Buffer: Ambil 15 riwayat percakapan terakhir di Voice Channel agar paham konteks obrolan
         const voiceChannelKey = textChannel?.id || connection.joinConfig.channelId || 'voice';
-        const recentTurns = memoryStore.getRecentTurns(voiceChannelKey, 6);
+        const recentTurns = memoryStore.getRecentTurns(voiceChannelKey, 15);
 
         const voiceMessages: ChatMessage[] = [
           {
@@ -1549,17 +1695,25 @@ function attachVoiceReceiver(connection: VoiceConnection, textChannel: any) {
           },
         ];
 
-        // Masukkan riwayat multi-turn ke dalam konteks LLM
+        // Masukkan riwayat multi-turn ke dalam konteks LLM (termasuk percakapan ruangan pasif)
         for (const turn of recentTurns) {
           const speakerName = turn.userName || 'Teman';
+          const isPassiveTurn = !turn.botReply || turn.botReply.trim().length === 0;
+
           voiceMessages.push({
             role: 'user',
-            text: wrapUntrustedData(`[${speakerName}]: ${turn.userInput}`, 'VOICE_HISTORY'),
+            text: wrapUntrustedData(
+              isPassiveTurn ? `[${speakerName} (Di Ruangan)]: ${turn.userInput}` : `[${speakerName}]: ${turn.userInput}`,
+              'VOICE_HISTORY'
+            ),
           });
-          voiceMessages.push({
-            role: 'model',
-            text: turn.botReply,
-          });
+
+          if (!isPassiveTurn) {
+            voiceMessages.push({
+              role: 'model',
+              text: turn.botReply,
+            });
+          }
         }
 
         // Kalimat pengguna saat ini dengan label nama pembicara

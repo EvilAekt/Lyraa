@@ -10,7 +10,7 @@ import { MemoryStore, AddMemoryResult } from './memory-store.js';
 
 export interface ExtractedFactCandidate {
   fact: string;
-  category: 'gaming' | 'preference' | 'hobby' | 'general';
+  category: 'gaming' | 'preference' | 'hobby' | 'general' | 'identity';
   confidence: number;
 }
 
@@ -32,9 +32,9 @@ export class FactExtractor {
     const trimmed = text.trim();
 
     // Pattern 1: Favorite game / main game
-    // Contoh: "aku suka main game apex legends bareng temen", "aku suka main valorant"
+    // Contoh: "aku suka main game apex legends bareng temen", "aku suka main valorant", "gue sering main dota"
     const gameMatch = trimmed.match(
-      /(?:suka\s+main\s+game|suka\s+main|sering\s+main|biasa\s+main|game\s+favoritku)\s+([^.,!?\n]+?)(?:\s+(?:bareng|sama|di|pas|kalo|kalau|aja|terus|nih|ya)\b|[.,!?\n]|$)/i
+      /(?:suka\s+main\s+game|suka\s+main|sering\s+main|biasa\s+main|game\s+favoritku|demen\s+main)\s+([^.,!?\n]+?)(?:\s+(?:bareng|sama|di|pas|kalo|kalau|aja|terus|nih|ya|dong)\b|[.,!?\n]|$)/i
     );
     if (gameMatch) {
       const game = gameMatch[1].trim();
@@ -47,8 +47,8 @@ export class FactExtractor {
       }
     }
 
-    // Pattern 2: Explicit favorite
-    // Contoh: "makanan favoritku nasi goreng pedas", "hero kesukaanku invoker"
+    // Pattern 2: Explicit favorite (game, makanan, minuman, musik, anime)
+    // Contoh: "makanan favoritku nasi goreng pedas", "anime kesukaanku frieren"
     const favMatch = trimmed.match(
       /(?:([a-zA-Z]+)\s+)?(?:favoritku|kesukaanku)\s+(?:adalah\s+)?([^.,!?\n]+?)(?:\s+(?:banget|sih|nih|ya)\b|[.,!?\n]|$)/i
     );
@@ -64,7 +64,40 @@ export class FactExtractor {
       }
     }
 
-    // Pattern 3: Hobbies
+    // Pattern 3: General likes & preferences
+    // Contoh: "aku suka kopi susu", "gue demen mie ayam", "aku suka kucing"
+    const generalLikeMatch = trimmed.match(
+      /\b(?:aku|gue|gw|saya)\s+(?:paling\s+)?(?:suka|demen|gemar)\s+([^.,!?\n]+?)(?:\s+(?:banget|sih|nih|ya)\b|[.,!?\n]|$)/i
+    );
+    if (generalLikeMatch) {
+      const likedThing = generalLikeMatch[1].trim();
+      // Pastikan bukan main game yang sudah tertangkap di pattern 1
+      if (!likedThing.startsWith('main') && !this.memoryStore.isSensitiveFact(likedThing) && likedThing.length >= 2 && likedThing.length <= 40) {
+        candidates.push({
+          fact: `Menyukai ${likedThing}`,
+          category: 'preference',
+          confidence: 0.85,
+        });
+      }
+    }
+
+    // Pattern 4: Dislikes & Allergies
+    // Contoh: "aku gak suka pedas", "aku alergi udang", "gue benci durian"
+    const dislikeMatch = trimmed.match(
+      /\b(?:aku|gue|gw|saya)\s+(?:gak\s+suka|tidak\s+suka|benci|alergi(?:\s+sama)?)\s+([^.,!?\n]+?)(?:\s+(?:banget|sih|nih|ya)\b|[.,!?\n]|$)/i
+    );
+    if (dislikeMatch) {
+      const dislikedItem = dislikeMatch[1].trim();
+      if (!this.memoryStore.isSensitiveFact(dislikedItem) && dislikedItem.length >= 2 && dislikedItem.length <= 40) {
+        candidates.push({
+          fact: `Tidak menyukai / alergi terhadap ${dislikedItem}`,
+          category: 'preference',
+          confidence: 0.9,
+        });
+      }
+    }
+
+    // Pattern 5: Hobbies
     // Contoh: "hobiku fotografi", "aku hobi dengerin musik"
     const hobbyMatch = trimmed.match(
       /\b(?:hobi(?:ku)?|hobiku\s+adalah)\s+([^.,!?\n]+?)(?:\s+(?:banget|sih|nih|ya)\b|[.,!?\n]|$)/i
@@ -80,17 +113,17 @@ export class FactExtractor {
       }
     }
 
-    // Pattern 4: Calling name / nickname
-    // Contoh: "panggil aku dimas ya", "namaku ryan"
+    // Pattern 6: Calling name / nickname
+    // Contoh: "panggil aku dimas ya", "namaku ryan", "nama gue aekt", "panggil gue aekt"
     const nameMatch = trimmed.match(
-      /\b(?:panggil\s+aku|namaku)\s+([a-zA-Z]{2,20})/i
+      /\b(?:panggil\s+(?:aku|gue|gw|saya)|nama\s+(?:ku|gue|gw|saya))\s+(?:adalah\s+)?([a-zA-Z0-9_ -]{2,20})(?:\s+(?:aja|ya|dong)\b|[.,!?\n]|$)/i
     );
     if (nameMatch) {
       const name = nameMatch[1].trim();
       if (!this.memoryStore.isSensitiveFact(name) && name.length >= 2) {
         candidates.push({
           fact: `Nama panggilan: ${name}`,
-          category: 'general',
+          category: 'identity' as any,
           confidence: 0.95,
         });
       }
